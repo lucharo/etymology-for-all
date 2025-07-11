@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+duckdb
+pandas
+httpx
+requests
