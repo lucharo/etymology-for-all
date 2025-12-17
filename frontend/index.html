@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etymology Graph Explorer</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+    <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Etymology Explorer</h1>
+            <p class="subtitle">Trace the origins of words through time</p>
+        </header>
+
+        <div class="search-container">
+            <input
+                type="text"
+                id="word-input"
+                placeholder="Enter a word..."
+                autocomplete="off"
+                autofocus
+            >
+            <button id="search-btn" title="Search">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.3-4.3"></path>
+                </svg>
+            </button>
+            <button id="random-btn" title="Random word">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline>
+                    <polyline points="7.5 19.79 7.5 14.6 3 12"></polyline>
+                    <polyline points="21 12 16.5 14.6 16.5 19.79"></polyline>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div id="graph-container">
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <span>Tracing etymology...</span>
+            </div>
+            <div id="empty-state">
+                <p>Search for a word to see its etymological journey</p>
+            </div>
+            <div id="error-state" class="hidden">
+                <p id="error-message"></p>
+            </div>
+            <div id="cy"></div>
+        </div>
+
+        <div id="word-info" class="hidden">
+            <h2 id="current-word"></h2>
+            <div id="legend"></div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Data from <a href="https://github.com/clefourrier/EtymDB-2.0" target="_blank" rel="noopener">EtymDB 2.1</a></p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

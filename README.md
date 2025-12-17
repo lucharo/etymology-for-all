@@ -1,0 +1,74 @@
+# Etymology Graph Explorer
+
+A visual tool for exploring the origins and historical relationships between words. Search for any word and see its etymological journey through time, from modern usage back to ancient roots.
+
+## Quick Start
+
+### Using uv (recommended for development)
+
+```bash
+# Install dependencies
+uv sync
+
+# Run the server
+uv run uvicorn backend.main:app --reload
+
+# Open http://localhost:8000 in your browser
+```
+
+### Using Docker
+
+```bash
+# Build the image
+docker build -t etymology .
+
+# Run the container
+docker run -p 8000:8000 etymology
+
+# Open http://localhost:8000 in your browser
+```
+
+The first run will download the etymology database (~50MB). This data is cached for subsequent runs.
+
+## Features
+
+- **Search any word** to see its etymological tree
+- **Random word** button for exploration and discovery
+- **Interactive graph** - zoom, pan, and click on nodes
+- **Color-coded languages** to visualize word evolution across language families
+- **Mobile-friendly** responsive design
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /` | Web interface |
+| `GET /graph/{word}` | Etymology graph for a word (JSON) |
+| `GET /random` | Random English word |
+| `GET /health` | Health check |
+
+## Data Source
+
+Etymology data comes from [EtymDB 2.1](https://github.com/clefourrier/EtymDB-2.0), an open etymological database derived from Wiktionary.
+
+> Fourrier & Sagot (2020), "Methodological Aspects of Developing and Managing an Etymological Lexical Resource: Introducing EtymDB-2.0", Proceedings of the LREC Conference.
+
+## Tech Stack
+
+- **Backend**: FastAPI + DuckDB
+- **Frontend**: Vanilla JS + Cytoscape.js
+- **Data**: EtymDB 2.1 (auto-downloaded on first run)
+
+## Development
+
+```bash
+# Run tests
+uv run --group dev pytest backend/tests -q
+
+# Run with hot reload
+uv run uvicorn backend.main:app --reload
+```
+
+## License
+
+GPL-3.0 - see [LICENSE](LICENSE)
