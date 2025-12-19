@@ -129,9 +129,33 @@ def fetch_etymology(word: str, depth: int = 5) -> Optional[Dict]:
 
 
 def fetch_random_word() -> Dict[str, Optional[str]]:
-    """Return a random English word from the dataset."""
+    """Return a random curated English word (has etymology, no phrases/proper nouns)."""
     with _ConnectionManager() as conn:
         row = conn.execute(
-            "SELECT lexeme FROM words WHERE lang = 'en' ORDER BY random() LIMIT 1"
+            "SELECT lexeme FROM v_english_curated ORDER BY random() LIMIT 1"
         ).fetchone()
         return {"word": row[0] if row else None}
+
+
+def fetch_language_info(lang_code: str) -> Optional[Dict[str, str]]:
+    """Return language family info for a language code."""
+    with _ConnectionManager() as conn:
+        row = conn.execute(
+            "SELECT lang_name, family, branch FROM language_families WHERE lang_code = ?",
+            [lang_code],
+        ).fetchone()
+        if row:
+            return {"name": row[0], "family": row[1], "branch": row[2]}
+        return None
+
+
+def fetch_all_language_families() -> Dict[str, Dict[str, str]]:
+    """Return all language family mappings."""
+    with _ConnectionManager() as conn:
+        rows = conn.execute(
+            "SELECT lang_code, lang_name, family, branch FROM language_families"
+        ).fetchall()
+        return {
+            row[0]: {"name": row[1], "family": row[2], "branch": row[3]}
+            for row in rows
+        }

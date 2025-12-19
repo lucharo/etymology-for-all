@@ -5,9 +5,12 @@ description = "Backend API for the Etymology Graph Explorer"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [
+    "altair>=6.0.0",
     "duckdb>=1.4.0",
     "fastapi>=0.116.2",
     "httpx>=0.28.1",
+    "polars>=1.36.1",
+    "pyarrow>=22.0.0",
     "uvicorn>=0.35.0",
 ]
 

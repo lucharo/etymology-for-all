@@ -7,34 +7,32 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     import marimo as mo
-    return (mo,)
+    import altair as alt
+    import polars as pl
+    import duckdb
+    from pathlib import Path
+    return Path, alt, duckdb, mo
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        """
-        # Etymology Database Exploration
+    mo.md("""
+    # Etymology Database Exploration
 
-        This notebook explores the EtymDB dataset to understand:
-        - Total word count and coverage
-        - Distribution of etymology tree sizes
-        - Language distribution
-        - Data quality issues (phrases, proper nouns, etc.)
-        """
-    )
+    This notebook explores the EtymDB dataset to understand:
+    - Total word count and coverage
+    - Distribution of etymology tree sizes
+    - Language distribution
+    - Data quality issues (phrases, proper nouns, etc.)
+    """)
     return
 
 
 @app.cell
-def _():
-    import duckdb
-    from pathlib import Path
-
-    # Connect to the database
+def _(Path, duckdb):
     DB_PATH = Path(__file__).parent.parent / "backend" / "data" / "etymdb.duckdb"
     conn = duckdb.connect(DB_PATH.as_posix(), read_only=True)
-    return DB_PATH, Path, conn, duckdb
+    return (conn,)
 
 
 @app.cell
@@ -57,32 +55,34 @@ def _(conn, mo):
         | English words | {english_words:,} |
         """
     )
-    return english_words, total_links, total_words, unique_langs
+    return
 
 
 @app.cell
-def _(conn, mo):
-    # Language distribution (top 20)
-    lang_dist = conn.execute("""
+def _(alt, conn, mo):
+    lang_df = conn.execute("""
         SELECT lang, COUNT(*) as count
         FROM words
         GROUP BY lang
         ORDER BY count DESC
         LIMIT 20
-    """).fetchall()
+    """).pl()
 
-    lang_table = "| Language | Word Count |\n|----------|------------|\n"
-    for _lang, _count in lang_dist:
-        lang_table += f"| {_lang} | {_count:,} |\n"
-
-    mo.md(
-        f"""
-        ## Top 20 Languages by Word Count
-
-        {lang_table}
-        """
+    lang_chart = alt.Chart(lang_df).mark_bar().encode(
+        x=alt.X('count:Q', title='Word Count'),
+        y=alt.Y('lang:N', title='Language', sort='-x'),
+        tooltip=['lang', 'count']
+    ).properties(
+        title='Top 20 Languages by Word Count',
+        width=500,
+        height=400
     )
-    return (lang_dist,)
+
+    mo.vstack([
+        mo.md("## Top 20 Languages by Word Count"),
+        lang_chart
+    ])
+    return
 
 
 @app.cell
@@ -106,7 +106,7 @@ def _(conn, mo):
         | Words that are ancestors (are targets) | {words_as_targets:,} |
         """
     )
-    return words_as_targets, words_with_links
+    return
 
 
 @app.cell
@@ -133,39 +133,34 @@ def _(conn, mo):
         | **Coverage** | **{coverage_pct:.1f}%** |
         """
     )
-    return coverage_pct, en_total, en_with_links
+    return
 
 
 @app.cell
 def _(conn, mo):
-    # Sample words WITHOUT etymology (potential junk)
-    no_etym_samples = conn.execute("""
-        SELECT w.lexeme
+    no_etym_df = conn.execute("""
+        SELECT w.lexeme as word
         FROM words w
         LEFT JOIN links l ON w.word_ix = l.source
         WHERE w.lang = 'en' AND l.source IS NULL
         ORDER BY RANDOM()
-        LIMIT 30
-    """).fetchall()
+        LIMIT 50
+    """).pl()
 
-    samples = [row[0] for row in no_etym_samples]
-
-    mo.md(
-        f"""
+    mo.vstack([
+        mo.md("""
         ## Sample English Words WITHOUT Etymology Links
 
         These might be phrases, proper nouns, or just missing data:
-
-        {', '.join(samples)}
-        """
-    )
-    return no_etym_samples, samples
+        """),
+        mo.ui.table(no_etym_df, selection=None)
+    ])
+    return
 
 
 @app.cell
-def _(conn, mo):
-    # Sample words WITH rich etymology trees
-    rich_etym = conn.execute("""
+def _(alt, conn, mo):
+    rich_etym_df = conn.execute("""
         WITH tree_sizes AS (
             SELECT w.lexeme, w.word_ix, COUNT(DISTINCT l.target) as link_count
             FROM words w
@@ -174,124 +169,124 @@ def _(conn, mo):
             GROUP BY w.lexeme, w.word_ix
             HAVING COUNT(DISTINCT l.target) >= 3
         )
-        SELECT lexeme, link_count
+        SELECT lexeme as word, link_count
         FROM tree_sizes
         ORDER BY link_count DESC
-        LIMIT 30
-    """).fetchall()
+        LIMIT 50
+    """).pl()
 
-    rich_table = "| Word | Direct Links |\n|------|-------------|\n"
-    for _word, _count in rich_etym:
-        rich_table += f"| {_word} | {_count} |\n"
-
-    mo.md(
-        f"""
-        ## English Words with Rich Etymology (3+ direct links)
-
-        {rich_table}
-        """
+    rich_chart = alt.Chart(rich_etym_df.head(20)).mark_bar().encode(
+        x=alt.X('link_count:Q', title='Direct Etymology Links'),
+        y=alt.Y('word:N', title='Word', sort='-x'),
+        tooltip=['word', 'link_count'],
+        color=alt.Color('link_count:Q', scale=alt.Scale(scheme='blues'), legend=None)
+    ).properties(
+        title='Top 20 English Words by Etymology Richness',
+        width=400,
+        height=400
     )
-    return (rich_etym,)
+
+    mo.vstack([
+        mo.md("## English Words with Rich Etymology (3+ direct links)"),
+        mo.hstack([
+            rich_chart,
+            mo.ui.table(rich_etym_df, selection=None)
+        ], justify="start", gap=2)
+    ])
+    return
 
 
 @app.cell
 def _(conn, mo):
-    # Detect potential phrases (contain spaces)
-    phrases = conn.execute("""
+    phrases_count = conn.execute("""
         SELECT COUNT(*)
         FROM words
         WHERE lang = 'en' AND lexeme LIKE '% %'
     """).fetchone()[0]
 
-    phrase_samples = conn.execute("""
-        SELECT lexeme
+    phrase_samples_df = conn.execute("""
+        SELECT lexeme as phrase
         FROM words
         WHERE lang = 'en' AND lexeme LIKE '% %'
         ORDER BY RANDOM()
-        LIMIT 20
-    """).fetchall()
+        LIMIT 30
+    """).pl()
 
-    mo.md(
-        f"""
+    mo.vstack([
+        mo.md(f"""
         ## Potential Data Quality Issues
 
-        ### Phrases (contain spaces)
-        - Count: {phrases:,}
-        - Samples: {', '.join([p[0] for p in phrase_samples])}
-        """
-    )
-    return phrase_samples, phrases
+        ### Phrases (contain spaces): {phrases_count:,} total
+        """),
+        mo.ui.table(phrase_samples_df, selection=None)
+    ])
+    return
 
 
 @app.cell
 def _(conn, mo):
-    # Detect potential proper nouns (start with capital)
-    proper_nouns = conn.execute("""
+    proper_count = conn.execute("""
         SELECT COUNT(*)
         FROM words
         WHERE lang = 'en'
-        AND lexeme GLOB '[A-Z]*'
-        AND lexeme NOT GLOB '[A-Z][A-Z]*'
+        AND regexp_matches(lexeme, '^[A-Z][a-z]')
     """).fetchone()[0]
 
-    proper_samples = conn.execute("""
-        SELECT lexeme
+    proper_samples_df = conn.execute("""
+        SELECT lexeme as word
         FROM words
         WHERE lang = 'en'
-        AND lexeme GLOB '[A-Z]*'
-        AND lexeme NOT GLOB '[A-Z][A-Z]*'
+        AND regexp_matches(lexeme, '^[A-Z][a-z]')
         ORDER BY RANDOM()
-        LIMIT 20
-    """).fetchall()
+        LIMIT 30
+    """).pl()
 
-    mo.md(
-        f"""
-        ### Potential Proper Nouns (capitalized)
-        - Count: {proper_nouns:,}
-        - Samples: {', '.join([p[0] for p in proper_samples])}
-        """
-    )
-    return proper_nouns, proper_samples
+    mo.vstack([
+        mo.md(f"### Potential Proper Nouns (capitalized): {proper_count:,} total"),
+        mo.ui.table(proper_samples_df, selection=None)
+    ])
+    return
 
 
 @app.cell
-def _(conn, mo):
-    # Link types distribution
-    link_types = conn.execute("""
+def _(alt, conn, mo):
+    link_types_df = conn.execute("""
         SELECT type, COUNT(*) as count
         FROM links
         GROUP BY type
         ORDER BY count DESC
-    """).fetchall()
+    """).pl()
 
-    type_table = "| Link Type | Count |\n|-----------|-------|\n"
-    for _ltype, _count in link_types:
-        type_table += f"| {_ltype} | {_count:,} |\n"
-
-    mo.md(
-        f"""
-        ## Etymology Link Types
-
-        {type_table}
-        """
+    link_types_chart = alt.Chart(link_types_df).mark_bar().encode(
+        x=alt.X('count:Q', title='Count'),
+        y=alt.Y('type:N', title='Link Type', sort='-x'),
+        tooltip=['type', 'count'],
+        color=alt.Color('type:N', legend=None)
+    ).properties(
+        title='Etymology Link Types Distribution',
+        width=500,
+        height=300
     )
-    return (link_types,)
+
+    mo.vstack([
+        mo.md("## Etymology Link Types"),
+        link_types_chart
+    ])
+    return
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        """
-        ## Recommendations
+    mo.md("""
+    ## Recommendations
 
-        Based on this analysis:
+    Based on this analysis:
 
-        1. **Random should filter**: Only return English words that have etymology links
-        2. **Consider filtering phrases**: Words with spaces are likely not useful
-        3. **Highlight rich words**: Surface words with 3+ links as "interesting"
-        4. **Stats page**: Show coverage and language distribution to users
-        """
-    )
+    1. **Random should filter**: Only return English words that have etymology links
+    2. **Consider filtering phrases**: Words with spaces are likely not useful
+    3. **Highlight rich words**: Surface words with 3+ links as "interesting"
+    4. **Stats page**: Show coverage and language distribution to users
+    """)
     return
 
 

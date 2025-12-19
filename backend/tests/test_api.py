@@ -45,6 +45,23 @@ def _prepare_test_database() -> None:
         conn.execute("CREATE INDEX idx_links_source ON links(source)")
         conn.execute("CREATE INDEX idx_links_target ON links(target)")
 
+        # Gold layer: macros and views
+        conn.execute("CREATE MACRO is_phrase(lexeme) AS lexeme LIKE '% %'")
+        conn.execute("CREATE MACRO is_proper_noun(lexeme) AS regexp_matches(lexeme, '^[A-Z][a-z]')")
+        conn.execute("CREATE MACRO is_clean_word(lexeme) AS NOT is_phrase(lexeme) AND NOT is_proper_noun(lexeme)")
+        conn.execute("""
+            CREATE VIEW v_english_curated AS
+            SELECT DISTINCT w.*
+            FROM words w
+            JOIN links l ON w.word_ix = l.source
+            WHERE w.lang = 'en' AND is_clean_word(w.lexeme)
+        """)
+        conn.execute("""
+            CREATE TABLE language_families (
+                lang_code VARCHAR PRIMARY KEY, lang_name VARCHAR, family VARCHAR, branch VARCHAR
+            )
+        """)
+
 
 _prepare_test_database()
 
@@ -70,4 +87,6 @@ def test_graph_endpoint_missing_word():
 def test_random_endpoint_returns_word():
     response = client.get("/random")
     assert response.status_code == 200
-    assert response.json()["word"] in {"mother", "river"}
+    # Only "mother" is in v_english_curated (has etymology, is clean)
+    # "river" has no etymology links so it's excluded
+    assert response.json()["word"] == "mother"
