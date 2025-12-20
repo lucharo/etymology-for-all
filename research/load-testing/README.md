@@ -1,5 +1,14 @@
 # Load Testing Research
 
+## Two Types of Tests
+
+| Test | Purpose | Rate Limiting |
+|------|---------|---------------|
+| **Load test** | Server capacity - can it handle N users? | Off |
+| **Rate limit test** | Throttling works - blocks excessive requests? | On |
+
+Note: Locust runs all users from one IP, so rate limit tests show all users sharing one bucket (not realistic for production where each user has their own IP).
+
 ## How Rate Limiting Works
 
 **Per-IP rate limiting** means each user's IP address has its own request bucket.
@@ -55,16 +64,14 @@ limit ≈ 60 seconds / p95_latency
 
 See [`locustfile.py`](locustfile.py) docstring for setup instructions.
 
-## Results (Local, 20 concurrent users, 20 seconds)
+## Load Test Results (rate limiting disabled)
 
-| Endpoint | Median | 95th % | Max |
-|----------|--------|--------|-----|
-| `/graph/{word}` | 530ms | 3100ms | 3600ms |
-| `/search` | 130ms | 520ms | 1200ms |
-| `/random` | 140ms | 1200ms | 1900ms |
-| `/health` | 8ms | 58ms | 77ms |
+| Users | Failures | p50 Latency | Throughput |
+|-------|----------|-------------|------------|
+| 20 | 0% | 150ms | 7 req/s |
+| 200 | 0% | 10 sec | 10 req/s |
 
-**Throughput**: ~8 req/sec with 20 users, 0 failures.
+Server handles 20 users well. At 200 users it slows significantly but doesn't crash.
 
 ### Key optimization
 Query only the definitions needed per graph instead of loading all 40K.
