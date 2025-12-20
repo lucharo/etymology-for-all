@@ -53,13 +53,7 @@ limit ≈ 60 seconds / p95_latency
 
 ## Running Load Tests
 
-```bash
-# Start the API
-uv run uvicorn backend.main:app &
-
-# Run Locust (opens web UI at http://localhost:8089)
-uv run locust -f research/load-testing/locustfile.py --host http://localhost:8000
-```
+See [`locustfile.py`](locustfile.py) docstring for setup instructions.
 
 ## Results (Local, 20 concurrent users, 20 seconds)
 
@@ -73,5 +67,5 @@ uv run locust -f research/load-testing/locustfile.py --host http://localhost:800
 **Throughput**: ~8 req/sec with 20 users, 0 failures.
 
 ### Key optimization
-Query only the ~7 definitions needed per graph instead of loading all 40K.
+Query only the definitions needed per graph instead of loading all 40K.
 This improved `/graph` from 1900ms → 530ms (3.6x faster).
