@@ -32,7 +32,7 @@ def health_check():
 
 
 @app.get("/graph/{word}")
-@limiter.limit("100/minute")
+@limiter.limit("20/minute")
 def get_graph(request: Request, word: str):
     """Fetch etymology graph for a word."""
     graph = fetch_etymology(word)
@@ -42,14 +42,14 @@ def get_graph(request: Request, word: str):
 
 
 @app.get("/random")
-@limiter.limit("60/minute")
+@limiter.limit("50/minute")
 def get_random_word(request: Request):
     """Return a random English word from the dataset."""
     return fetch_random_word()
 
 
 @app.get("/search")
-@limiter.limit("200/minute")
+@limiter.limit("120/minute")
 def search(request: Request, q: str = "", limit: int = 10):
     """Search for words matching the query (autocomplete)."""
     if len(q) < 2:

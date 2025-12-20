@@ -36,13 +36,20 @@ Each user's browser talks directly to the API. The rate limiter sees their real 
 **429 is intentional throttling** - "slow down, you're making too many requests"
 **503/timeout is capacity issue** - "server can't keep up with total load"
 
-## Current Rate Limits
+## Current Rate Limits (based on p95 latency)
 
-| Endpoint | Limit | Why |
-|----------|-------|-----|
-| `/graph/{word}` | 60/min | Main feature, generous limit |
-| `/random` | 30/min | Lower to prevent abuse |
-| `/search` | 120/min | Autocomplete fires rapidly while typing |
+Rate limits are calculated from 95th percentile latency to ensure the server
+isn't overwhelmed even under load:
+
+```
+limit ≈ 60 seconds / p95_latency
+```
+
+| Endpoint | p95 Latency | Calculated | Limit Set |
+|----------|-------------|------------|-----------|
+| `/graph/{word}` | 3100ms | 19/min | 20/min |
+| `/random` | 1200ms | 50/min | 50/min |
+| `/search` | 520ms | 115/min | 120/min |
 
 ## Running Load Tests
 

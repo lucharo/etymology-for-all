@@ -4,6 +4,39 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.6.0 - Load Testing & Rate Limiting (2024-12-20)
+
+### Load Testing Infrastructure
+- **Locust load testing** in `research/load-testing/` for API performance analysis
+- Documented per-IP rate limiting behavior and how it scales with concurrent users
+- Comprehensive README explaining rate limiting concepts and test methodology
+
+### Performance Optimization
+- **3.6x faster `/graph` endpoint** (1900ms → 530ms median)
+- Root cause: was loading ALL 40K definitions on every request
+- Fix: query only the definitions needed for each graph (typically <20 vs 40K)
+
+### API Rate Limiting
+Rate limits calculated from 95th percentile latency (`limit ≈ 60s / p95_latency`):
+
+| Endpoint | p95 Latency | Rate Limit |
+|----------|-------------|------------|
+| `/graph/{word}` | 3100ms | 20/min |
+| `/random` | 1200ms | 50/min |
+| `/search` | 520ms | 120/min |
+
+### Developer Experience
+- **Ruff linting/formatting** with modern Python type hints (`Dict` → `dict`, `Optional[X]` → `X | None`)
+- **prek pre-commit hooks** (Rust-based, faster than pre-commit)
+- Development section in README
+
+### Dependencies
+- `slowapi` for rate limiting
+- `locust` (dev) for load testing
+- `prek` (dev) for pre-commit hooks
+
+---
+
 ## v0.5.0 - Definition Enrichment & Mobile UI (2024-12-20)
 
 ### Definition Enrichment
