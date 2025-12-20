@@ -77,20 +77,26 @@ def _get_language_families(conn) -> dict[str, dict[str, str]]:
     return {row[0]: {"name": row[1], "family": row[2], "branch": row[3]} for row in rows}
 
 
-def _get_enriched_definitions(conn) -> dict[str, str]:
-    """Load enriched definitions from Free Dictionary API into a lookup dict.
+def _get_definitions_for_lexemes(conn, lexemes: list[str]) -> dict[str, str]:
+    """Fetch definitions only for the specified lexemes.
 
     Returns dict mapping lowercase lexeme -> definition string.
-    Uses lowercase keys for case-insensitive lookup.
     """
-    # Check if the view exists (table might not be populated yet)
+    if not lexemes:
+        return {}
     try:
+        # Query only the specific lexemes we need
+        placeholders = ",".join(["?" for _ in lexemes])
         rows = conn.execute(
-            "SELECT lower(lexeme), definition FROM v_definitions WHERE definition IS NOT NULL"
+            f"""
+            SELECT lower(lexeme), definition
+            FROM v_definitions
+            WHERE lower(lexeme) IN ({placeholders}) AND definition IS NOT NULL
+            """,
+            [lex.lower() for lex in lexemes],
         ).fetchall()
         return {row[0]: row[1].strip('"') if row[1] else None for row in rows}
     except Exception:
-        # Table/view doesn't exist yet
         return {}
 
 
@@ -151,12 +157,10 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
 
     depth = _normalize_depth(depth)
     with _ConnectionManager() as conn:
-        # Load language families for enrichment
+        # Load language families (small table, 53 rows)
         lang_families = _get_language_families(conn)
-        # Load enriched definitions from Free Dictionary API
-        enriched_defs = _get_enriched_definitions(conn)
 
-        # Prefer English words, then other languages
+        # Find starting word (prefer English)
         start = conn.execute(
             """
             SELECT word_ix, lang, lexeme, sense
@@ -171,13 +175,11 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
             return None
 
         start_ix, start_lang, start_lexeme, start_sense = start
-        nodes: dict[int, dict] = {
-            start_ix: _build_node(
-                start_lexeme, start_lang, start_sense, lang_families, enriched_defs
-            ),
-        }
+
+        # Collect all node data first (without definitions)
+        raw_nodes: dict[int, tuple] = {start_ix: (start_lexeme, start_lang, start_sense)}
         edges = []
-        seen_edges = set()
+        seen_edges: set[tuple[str, str]] = set()
 
         if depth > 0:
             records = conn.execute(
@@ -211,28 +213,28 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
             for row in records:
                 child_ix, child_lexeme, child_lang, child_sense = row[:4]
                 parent_ix, parent_lexeme, parent_lang, parent_sense = row[4:]
-                nodes.setdefault(
-                    child_ix,
-                    _build_node(
-                        child_lexeme, child_lang, child_sense, lang_families, enriched_defs
-                    ),
-                )
-                nodes.setdefault(
-                    parent_ix,
-                    _build_node(
-                        parent_lexeme, parent_lang, parent_sense, lang_families, enriched_defs
-                    ),
-                )
-                # Create unique edge IDs using lexeme+lang
+
+                raw_nodes.setdefault(child_ix, (child_lexeme, child_lang, child_sense))
+                raw_nodes.setdefault(parent_ix, (parent_lexeme, parent_lang, parent_sense))
+
+                # Build edges
                 child_id = _make_node_id(child_lexeme, child_lang)
                 parent_id = _make_node_id(parent_lexeme, parent_lang)
-                # Skip true self-loops (same node)
-                if child_id == parent_id:
-                    continue
-                edge_key = (child_id, parent_id)
-                if edge_key not in seen_edges:
-                    seen_edges.add(edge_key)
-                    edges.append({"source": child_id, "target": parent_id})
+                if child_id != parent_id:
+                    edge_key = (child_id, parent_id)
+                    if edge_key not in seen_edges:
+                        seen_edges.add(edge_key)
+                        edges.append({"source": child_id, "target": parent_id})
+
+        # Fetch definitions only for English lexemes in this graph
+        english_lexemes = [lex for lex, lang, _ in raw_nodes.values() if lang == "en"]
+        enriched_defs = _get_definitions_for_lexemes(conn, english_lexemes)
+
+        # Build final nodes with all metadata
+        nodes = {
+            ix: _build_node(lexeme, lang, sense, lang_families, enriched_defs)
+            for ix, (lexeme, lang, sense) in raw_nodes.items()
+        }
 
         return {"nodes": list(nodes.values()), "edges": edges}
 

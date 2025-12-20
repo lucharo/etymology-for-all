@@ -4,22 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 try:  # Support execution via `python backend/main.py`
     from .database import fetch_etymology, fetch_random_word, search_words
 except ImportError:  # pragma: no cover - fallback when run as a script
     from database import fetch_etymology, fetch_random_word, search_words
 
-limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Etymology Graph API")
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Resolve frontend directory relative to this file
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
@@ -32,8 +26,7 @@ def health_check():
 
 
 @app.get("/graph/{word}")
-@limiter.limit("60/minute")
-def get_graph(request: Request, word: str):
+def get_graph(word: str):
     """Fetch etymology graph for a word."""
     graph = fetch_etymology(word)
     if not graph:
@@ -42,15 +35,13 @@ def get_graph(request: Request, word: str):
 
 
 @app.get("/random")
-@limiter.limit("30/minute")
-def get_random_word(request: Request):
+def get_random_word():
     """Return a random English word from the dataset."""
     return fetch_random_word()
 
 
 @app.get("/search")
-@limiter.limit("120/minute")
-def search(request: Request, q: str = "", limit: int = 10):
+def search(q: str = "", limit: int = 10):
     """Search for words matching the query (autocomplete)."""
     if len(q) < 2:
         return {"results": []}
