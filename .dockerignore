@@ -3,9 +3,9 @@
 venv/
 env/
 
-# Data files (will be downloaded at runtime)
-backend/data/
-*.duckdb
+# Data files (except the main database which is baked in)
+backend/data/*.csv
+backend/data/*.zip
 
 # Git
 .git/
@@ -18,8 +18,9 @@ __pycache__/
 *.so
 .Python
 
-# Tests
+# Tests and research
 backend/tests/
+research/
 pytest_cache/
 .pytest_cache/
 .coverage

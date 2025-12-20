@@ -25,16 +25,18 @@ COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/backend /app/backend
 COPY --from=builder /app/frontend /app/frontend
 
+# Copy pre-built database (baked into image for instant cold starts)
+COPY backend/data/etymdb.duckdb /app/backend/data/etymdb.duckdb
+
 # Use the virtual environment
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Create data directory for DuckDB
-RUN mkdir -p /app/backend/data
-
-EXPOSE 8000
+# Port configuration (HF Spaces uses 7860)
+ENV PORT=7860
+EXPOSE ${PORT}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health')" || exit 1
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn backend.main:app --host 0.0.0.0 --port ${PORT}
