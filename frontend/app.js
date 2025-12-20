@@ -6,7 +6,7 @@
 // API URL: empty for local dev (same origin), HF Spaces URL for production
 const API_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
     ? ''
-    : 'https://lucharo-etymology.hf.space';
+    : 'https://lucharo-etymology.hf.space'; // HF Space: https://huggingface.co/spaces/lucharo/etymology
 
 // Human-readable language names (fallback when not provided by API)
 const LANG_NAMES = {
