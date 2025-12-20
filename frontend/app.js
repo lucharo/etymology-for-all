@@ -3,6 +3,11 @@
  * Interactive visualization of word origins using Cytoscape.js
  */
 
+// API URL: empty for local dev (same origin), HF Spaces URL for production
+const API_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? ''
+    : 'https://lucharo-etymology.hf.space';
+
 // Human-readable language names (fallback when not provided by API)
 const LANG_NAMES = {
     en: 'English',
@@ -253,14 +258,14 @@ function showGraph() {
 
 // Fetch etymology data
 async function fetchEtymology(word) {
-    const response = await fetch(`/graph/${encodeURIComponent(word)}`);
+    const response = await fetch(`${API_URL}/graph/${encodeURIComponent(word)}`);
     await handleApiResponse(response, 'etymology lookup');
     return response.json();
 }
 
 // Fetch random word
 async function fetchRandomWord() {
-    const response = await fetch('/random');
+    const response = await fetch(`${API_URL}/random`);
     await handleApiResponse(response, 'random word');
     const data = await response.json();
     return data.word;
@@ -419,7 +424,7 @@ async function fetchSuggestions(query) {
     }
 
     try {
-        const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
+        const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
         if (response.status === 429) {
             // Silently ignore rate limits for autocomplete (non-critical)
             return;

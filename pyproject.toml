@@ -18,6 +18,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "huggingface-hub>=1.2.3",
     "locust>=2.42.6",
     "marimo>=0.18.4",
     "prek>=0.2.22",

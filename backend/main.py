@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -20,6 +21,18 @@ limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Etymology Graph API")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS for frontend hosted on different domain (e.g., Cloudflare Pages)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://etymology.luischav.es",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 # Resolve frontend directory relative to this file
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
