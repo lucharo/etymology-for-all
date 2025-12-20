@@ -25,15 +25,17 @@ Rate limits calculated from 95th percentile latency (`limit ≈ 60s / p95_latenc
 | `/random` | 1200ms | 50/min |
 | `/search` | 520ms | 120/min |
 
-### Developer Experience
-- **Ruff linting/formatting** with modern Python type hints (`Dict` → `dict`, `Optional[X]` → `X | None`)
-- **prek pre-commit hooks** (Rust-based, faster than pre-commit)
-- Development section in README
-
 ### Dependencies
 - `slowapi` for rate limiting
 - `locust` (dev) for load testing
-- `prek` (dev) for pre-commit hooks
+
+---
+
+## v0.5.1 - Developer Tooling (2024-12-20)
+
+- **Ruff linting/formatting** with modern Python type hints (`Dict` → `dict`, `Optional[X]` → `X | None`)
+- **prek pre-commit hooks** (Rust-based, faster than pre-commit)
+- Development section in README
 
 ---
 
