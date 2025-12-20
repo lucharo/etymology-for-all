@@ -1,11 +1,12 @@
 """FastAPI application exposing the etymology graph endpoints."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 try:  # Support execution via `python backend/main.py`
     from .database import fetch_etymology, fetch_random_word, search_words
@@ -50,6 +51,7 @@ def search(q: str = "", limit: int = 10):
 
 # Serve frontend static files (must be after API routes)
 if FRONTEND_DIR.exists():
+
     @app.get("/")
     def serve_index():
         """Serve the main HTML page."""

@@ -1,10 +1,10 @@
 """Database helpers for the FastAPI application."""
+
 from __future__ import annotations
 
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Optional
 
 import duckdb
 
@@ -69,18 +69,15 @@ def _normalize_depth(depth: int) -> int:
     return max(depth, 0)
 
 
-def _get_language_families(conn) -> Dict[str, Dict[str, str]]:
+def _get_language_families(conn) -> dict[str, dict[str, str]]:
     """Load language families into a lookup dict."""
     rows = conn.execute(
         "SELECT lang_code, lang_name, family, branch FROM language_families"
     ).fetchall()
-    return {
-        row[0]: {"name": row[1], "family": row[2], "branch": row[3]}
-        for row in rows
-    }
+    return {row[0]: {"name": row[1], "family": row[2], "branch": row[3]} for row in rows}
 
 
-def _get_enriched_definitions(conn) -> Dict[str, str]:
+def _get_enriched_definitions(conn) -> dict[str, str]:
     """Load enriched definitions from Free Dictionary API into a lookup dict.
 
     Returns dict mapping lowercase lexeme -> definition string.
@@ -106,9 +103,9 @@ def _build_node(
     lexeme: str,
     lang: str,
     sense: str,
-    lang_families: Dict,
-    enriched_defs: Optional[Dict[str, str]] = None,
-) -> Dict:
+    lang_families: dict,
+    enriched_defs: dict[str, str] | None = None,
+) -> dict:
     """Build a rich node with all available metadata.
 
     Args:
@@ -147,7 +144,7 @@ def _build_node(
     return node
 
 
-def fetch_etymology(word: str, depth: int = 5) -> Optional[Dict]:
+def fetch_etymology(word: str, depth: int = 5) -> dict | None:
     """Return an etymology graph for *word* or ``None`` if absent."""
     if not word:
         return None
@@ -174,8 +171,10 @@ def fetch_etymology(word: str, depth: int = 5) -> Optional[Dict]:
             return None
 
         start_ix, start_lang, start_lexeme, start_sense = start
-        nodes: Dict[int, Dict] = {
-            start_ix: _build_node(start_lexeme, start_lang, start_sense, lang_families, enriched_defs),
+        nodes: dict[int, dict] = {
+            start_ix: _build_node(
+                start_lexeme, start_lang, start_sense, lang_families, enriched_defs
+            ),
         }
         edges = []
         seen_edges = set()
@@ -214,11 +213,15 @@ def fetch_etymology(word: str, depth: int = 5) -> Optional[Dict]:
                 parent_ix, parent_lexeme, parent_lang, parent_sense = row[4:]
                 nodes.setdefault(
                     child_ix,
-                    _build_node(child_lexeme, child_lang, child_sense, lang_families, enriched_defs)
+                    _build_node(
+                        child_lexeme, child_lang, child_sense, lang_families, enriched_defs
+                    ),
                 )
                 nodes.setdefault(
                     parent_ix,
-                    _build_node(parent_lexeme, parent_lang, parent_sense, lang_families, enriched_defs)
+                    _build_node(
+                        parent_lexeme, parent_lang, parent_sense, lang_families, enriched_defs
+                    ),
                 )
                 # Create unique edge IDs using lexeme+lang
                 child_id = _make_node_id(child_lexeme, child_lang)
@@ -234,7 +237,7 @@ def fetch_etymology(word: str, depth: int = 5) -> Optional[Dict]:
         return {"nodes": list(nodes.values()), "edges": edges}
 
 
-def fetch_random_word() -> Dict[str, Optional[str]]:
+def fetch_random_word() -> dict[str, str | None]:
     """Return a random curated English word (has etymology, no phrases/proper nouns)."""
     with _ConnectionManager() as conn:
         row = conn.execute(
@@ -243,7 +246,7 @@ def fetch_random_word() -> Dict[str, Optional[str]]:
         return {"word": row[0] if row else None}
 
 
-def fetch_language_info(lang_code: str) -> Optional[Dict[str, str]]:
+def fetch_language_info(lang_code: str) -> dict[str, str] | None:
     """Return language family info for a language code."""
     with _ConnectionManager() as conn:
         row = conn.execute(
@@ -255,19 +258,16 @@ def fetch_language_info(lang_code: str) -> Optional[Dict[str, str]]:
         return None
 
 
-def fetch_all_language_families() -> Dict[str, Dict[str, str]]:
+def fetch_all_language_families() -> dict[str, dict[str, str]]:
     """Return all language family mappings."""
     with _ConnectionManager() as conn:
         rows = conn.execute(
             "SELECT lang_code, lang_name, family, branch FROM language_families"
         ).fetchall()
-        return {
-            row[0]: {"name": row[1], "family": row[2], "branch": row[3]}
-            for row in rows
-        }
+        return {row[0]: {"name": row[1], "family": row[2], "branch": row[3]} for row in rows}
 
 
-def search_words(query: str, limit: int = 10) -> list[Dict[str, str]]:
+def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
     """Search for English words matching the query (fuzzy prefix search).
 
     Returns curated words that have etymology data, including tree size.
@@ -311,7 +311,7 @@ def search_words(query: str, limit: int = 10) -> list[Dict[str, str]]:
             {
                 "word": row[0],
                 "sense": row[1] if row[1] and row[1].lower() != row[0].lower() else None,
-                "ancestors": row[2]  # Direct etymology links count
+                "ancestors": row[2],  # Direct etymology links count
             }
             for row in rows
         ]

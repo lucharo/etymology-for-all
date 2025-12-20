@@ -1,4 +1,5 @@
 """Load EtymDB CSV files into a DuckDB database."""
+
 from __future__ import annotations
 
 import os

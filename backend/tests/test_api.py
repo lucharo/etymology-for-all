@@ -1,4 +1,5 @@
 """Integration tests for the FastAPI application."""
+
 from __future__ import annotations
 
 import os
@@ -21,9 +22,7 @@ def _prepare_test_database() -> None:
         conn.execute(
             "CREATE TABLE words (word_ix BIGINT, lang VARCHAR, lexeme VARCHAR, sense VARCHAR)"
         )
-        conn.execute(
-            "CREATE TABLE links (type VARCHAR, source BIGINT, target BIGINT)"
-        )
+        conn.execute("CREATE TABLE links (type VARCHAR, source BIGINT, target BIGINT)")
         conn.executemany(
             "INSERT INTO words VALUES (?, ?, ?, ?)",
             [
@@ -48,7 +47,9 @@ def _prepare_test_database() -> None:
         # Gold layer: macros and views
         conn.execute("CREATE MACRO is_phrase(lexeme) AS lexeme LIKE '% %'")
         conn.execute("CREATE MACRO is_proper_noun(lexeme) AS regexp_matches(lexeme, '^[A-Z][a-z]')")
-        conn.execute("CREATE MACRO is_clean_word(lexeme) AS NOT is_phrase(lexeme) AND NOT is_proper_noun(lexeme)")
+        conn.execute(
+            "CREATE MACRO is_clean_word(lexeme) AS NOT is_phrase(lexeme) AND NOT is_proper_noun(lexeme)"
+        )
         conn.execute("""
             CREATE VIEW v_english_curated AS
             SELECT DISTINCT w.*
@@ -130,8 +131,7 @@ def test_enriched_definition_used_for_english_words():
 
     # Find the English "mother" node
     mother_node = next(
-        (n for n in payload["nodes"] if n["lexeme"] == "mother" and n["lang"] == "en"),
-        None
+        (n for n in payload["nodes"] if n["lexeme"] == "mother" and n["lang"] == "en"), None
     )
     assert mother_node is not None
 

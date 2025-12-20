@@ -5,6 +5,7 @@ Usage:
     uv run python -m backend.enrich_definitions --stats  # Check progress
     uv run python -m backend.enrich_definitions --test 50  # Test with 50 words
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,7 +33,9 @@ DELAY_MS = 300  # Delay between requests
 COMMIT_EVERY = 100  # Commit to DB every N words
 
 
-async def fetch_definition(session: aiohttp.ClientSession, word: str) -> tuple[str, str, str | None]:
+async def fetch_definition(
+    session: aiohttp.ClientSession, word: str
+) -> tuple[str, str, str | None]:
     """Fetch definition for a single word with retry logic."""
     url = f"{API_BASE}/{word}"
 
@@ -45,7 +48,7 @@ async def fetch_definition(session: aiohttp.ClientSession, word: str) -> tuple[s
                 elif resp.status == 404:
                     return (word, "not_found", None)
                 elif resp.status == 429:  # Rate limited
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(2**attempt)
                     continue
                 else:
                     if attempt < 2:
@@ -106,7 +109,9 @@ def ensure_definitions_table(conn: duckdb.DuckDBPyConnection) -> None:
     """)
 
 
-def store_result(conn: duckdb.DuckDBPyConnection, word: str, status: str, api_response: str | None) -> None:
+def store_result(
+    conn: duckdb.DuckDBPyConnection, word: str, status: str, api_response: str | None
+) -> None:
     """Store a single result in the database."""
     conn.execute(
         "INSERT OR REPLACE INTO definitions_raw (lexeme, api_response, fetched_at, status) VALUES (?, ?::JSON, ?, ?)",
@@ -152,7 +157,9 @@ async def enrich_definitions(max_words: int | None = None) -> None:
                     elapsed = time.time() - start_time
                     rate = (i + 1) / elapsed if elapsed > 0 else 0
                     remaining = (total - i - 1) / rate if rate > 0 else 0
-                    print(f"[{i+1:,}/{total:,}] {100*(i+1)/total:.1f}% - {rate:.1f}/sec - ETA: {remaining/60:.1f}m")
+                    print(
+                        f"[{i + 1:,}/{total:,}] {100 * (i + 1) / total:.1f}% - {rate:.1f}/sec - ETA: {remaining / 60:.1f}m"
+                    )
 
                 # Commit periodically
                 if (i + 1) % COMMIT_EVERY == 0:
@@ -165,8 +172,10 @@ async def enrich_definitions(max_words: int | None = None) -> None:
             conn.commit()
 
     elapsed = time.time() - start_time
-    print(f"\nDone! {total:,} words in {elapsed/60:.1f}m ({total/elapsed:.1f}/sec)")
-    print(f"  Success: {stats['success']:,}, Not found: {stats['not_found']:,}, Errors: {stats['error']:,}")
+    print(f"\nDone! {total:,} words in {elapsed / 60:.1f}m ({total / elapsed:.1f}/sec)")
+    print(
+        f"  Success: {stats['success']:,}, Not found: {stats['not_found']:,}, Errors: {stats['error']:,}"
+    )
 
 
 def get_stats() -> None:
@@ -182,14 +191,18 @@ def get_stats() -> None:
             print("No definitions_raw table yet. Run enrichment first.")
             return
 
-        total_curated = conn.execute("SELECT COUNT(DISTINCT lexeme) FROM v_english_curated").fetchone()[0]
-        stats = conn.execute("SELECT status, COUNT(*) FROM definitions_raw GROUP BY status").fetchall()
+        total_curated = conn.execute(
+            "SELECT COUNT(DISTINCT lexeme) FROM v_english_curated"
+        ).fetchone()[0]
+        stats = conn.execute(
+            "SELECT status, COUNT(*) FROM definitions_raw GROUP BY status"
+        ).fetchall()
 
         total_enriched = sum(s[1] for s in stats)
         remaining = total_curated - total_enriched
 
         print(f"Curated English words: {total_curated:,}")
-        print(f"Enriched: {total_enriched:,} ({100*total_enriched/total_curated:.1f}%)")
+        print(f"Enriched: {total_enriched:,} ({100 * total_enriched / total_curated:.1f}%)")
         print(f"Remaining: {remaining:,}\n")
         print("By status:")
         for status, count in stats:

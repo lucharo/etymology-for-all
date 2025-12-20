@@ -1,9 +1,10 @@
 """Utilities to download the EtymDB CSV files on demand."""
+
 from __future__ import annotations
 
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import httpx
 
