@@ -62,12 +62,12 @@ Etymology data comes from [EtymDB 2.1](https://github.com/clefourrier/EtymDB-2.0
 ## Development
 
 ```bash
-# Run tests
-uv run --group dev pytest backend/tests -q
-
-# Run with hot reload
-uv run uvicorn backend.main:app --reload
+uv sync                        # Install dependencies
+uv run prek install            # Set up pre-commit hooks
+uv run pytest backend/tests -q # Run tests
 ```
+
+Linting (ruff) runs automatically on commit via prek.
 
 ## License
 
