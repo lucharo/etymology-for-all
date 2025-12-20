@@ -54,9 +54,17 @@ uv run uvicorn backend.main:app &
 uv run locust -f research/load-testing/locustfile.py --host http://localhost:8000
 ```
 
-## Results
+## Results (Local, 20 concurrent users, 20 seconds)
 
-TODO: Run against HF Spaces deployment and document:
-- Max concurrent users before degradation
-- Average response times under load
-- Memory usage patterns
+| Endpoint | Median | 95th % | Max |
+|----------|--------|--------|-----|
+| `/graph/{word}` | 530ms | 3100ms | 3600ms |
+| `/search` | 130ms | 520ms | 1200ms |
+| `/random` | 140ms | 1200ms | 1900ms |
+| `/health` | 8ms | 58ms | 77ms |
+
+**Throughput**: ~8 req/sec with 20 users, 0 failures.
+
+### Key optimization
+Query only the ~7 definitions needed per graph instead of loading all 40K.
+This improved `/graph` from 1900ms → 530ms (3.6x faster).
