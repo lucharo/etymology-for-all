@@ -6,11 +6,12 @@ app = marimo.App(width="medium")
 
 @app.cell
 def _():
-    import marimo as mo
-    import altair as alt
-    import polars as pl
-    import duckdb
     from pathlib import Path
+
+    import altair as alt
+    import duckdb
+    import marimo as mo
+
     return Path, alt, duckdb, mo
 
 
@@ -68,20 +69,18 @@ def _(alt, conn, mo):
         LIMIT 20
     """).pl()
 
-    lang_chart = alt.Chart(lang_df).mark_bar().encode(
-        x=alt.X('count:Q', title='Word Count'),
-        y=alt.Y('lang:N', title='Language', sort='-x'),
-        tooltip=['lang', 'count']
-    ).properties(
-        title='Top 20 Languages by Word Count',
-        width=500,
-        height=400
+    lang_chart = (
+        alt.Chart(lang_df)
+        .mark_bar()
+        .encode(
+            x=alt.X("count:Q", title="Word Count"),
+            y=alt.Y("lang:N", title="Language", sort="-x"),
+            tooltip=["lang", "count"],
+        )
+        .properties(title="Top 20 Languages by Word Count", width=500, height=400)
     )
 
-    mo.vstack([
-        mo.md("## Top 20 Languages by Word Count"),
-        lang_chart
-    ])
+    mo.vstack([mo.md("## Top 20 Languages by Word Count"), lang_chart])
     return
 
 
@@ -147,14 +146,16 @@ def _(conn, mo):
         LIMIT 50
     """).pl()
 
-    mo.vstack([
-        mo.md("""
+    mo.vstack(
+        [
+            mo.md("""
         ## Sample English Words WITHOUT Etymology Links
 
         These might be phrases, proper nouns, or just missing data:
         """),
-        mo.ui.table(no_etym_df, selection=None)
-    ])
+            mo.ui.table(no_etym_df, selection=None),
+        ]
+    )
     return
 
 
@@ -175,24 +176,26 @@ def _(alt, conn, mo):
         LIMIT 50
     """).pl()
 
-    rich_chart = alt.Chart(rich_etym_df.head(20)).mark_bar().encode(
-        x=alt.X('link_count:Q', title='Direct Etymology Links'),
-        y=alt.Y('word:N', title='Word', sort='-x'),
-        tooltip=['word', 'link_count'],
-        color=alt.Color('link_count:Q', scale=alt.Scale(scheme='blues'), legend=None)
-    ).properties(
-        title='Top 20 English Words by Etymology Richness',
-        width=400,
-        height=400
+    rich_chart = (
+        alt.Chart(rich_etym_df.head(20))
+        .mark_bar()
+        .encode(
+            x=alt.X("link_count:Q", title="Direct Etymology Links"),
+            y=alt.Y("word:N", title="Word", sort="-x"),
+            tooltip=["word", "link_count"],
+            color=alt.Color("link_count:Q", scale=alt.Scale(scheme="blues"), legend=None),
+        )
+        .properties(title="Top 20 English Words by Etymology Richness", width=400, height=400)
     )
 
-    mo.vstack([
-        mo.md("## English Words with Rich Etymology (3+ direct links)"),
-        mo.hstack([
-            rich_chart,
-            mo.ui.table(rich_etym_df, selection=None)
-        ], justify="start", gap=2)
-    ])
+    mo.vstack(
+        [
+            mo.md("## English Words with Rich Etymology (3+ direct links)"),
+            mo.hstack(
+                [rich_chart, mo.ui.table(rich_etym_df, selection=None)], justify="start", gap=2
+            ),
+        ]
+    )
     return
 
 
@@ -212,14 +215,16 @@ def _(conn, mo):
         LIMIT 30
     """).pl()
 
-    mo.vstack([
-        mo.md(f"""
+    mo.vstack(
+        [
+            mo.md(f"""
         ## Potential Data Quality Issues
 
         ### Phrases (contain spaces): {phrases_count:,} total
         """),
-        mo.ui.table(phrase_samples_df, selection=None)
-    ])
+            mo.ui.table(phrase_samples_df, selection=None),
+        ]
+    )
     return
 
 
@@ -241,10 +246,12 @@ def _(conn, mo):
         LIMIT 30
     """).pl()
 
-    mo.vstack([
-        mo.md(f"### Potential Proper Nouns (capitalized): {proper_count:,} total"),
-        mo.ui.table(proper_samples_df, selection=None)
-    ])
+    mo.vstack(
+        [
+            mo.md(f"### Potential Proper Nouns (capitalized): {proper_count:,} total"),
+            mo.ui.table(proper_samples_df, selection=None),
+        ]
+    )
     return
 
 
@@ -257,21 +264,19 @@ def _(alt, conn, mo):
         ORDER BY count DESC
     """).pl()
 
-    link_types_chart = alt.Chart(link_types_df).mark_bar().encode(
-        x=alt.X('count:Q', title='Count'),
-        y=alt.Y('type:N', title='Link Type', sort='-x'),
-        tooltip=['type', 'count'],
-        color=alt.Color('type:N', legend=None)
-    ).properties(
-        title='Etymology Link Types Distribution',
-        width=500,
-        height=300
+    link_types_chart = (
+        alt.Chart(link_types_df)
+        .mark_bar()
+        .encode(
+            x=alt.X("count:Q", title="Count"),
+            y=alt.Y("type:N", title="Link Type", sort="-x"),
+            tooltip=["type", "count"],
+            color=alt.Color("type:N", legend=None),
+        )
+        .properties(title="Etymology Link Types Distribution", width=500, height=300)
     )
 
-    mo.vstack([
-        mo.md("## Etymology Link Types"),
-        link_types_chart
-    ])
+    mo.vstack([mo.md("## Etymology Link Types"), link_types_chart])
     return
 
 

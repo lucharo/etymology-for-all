@@ -18,6 +18,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "marimo>=0.18.4",
+    "prek>=0.2.22",
     "pytest>=8.4.2",
     "ruff>=0.8.0",
 ]
