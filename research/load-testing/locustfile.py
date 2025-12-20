@@ -1,9 +1,16 @@
 """Load testing for Etymology API.
 
-Run with:
-    uv run locust -f locustfile.py --host http://localhost:8000
+In one terminal, start the API:
+    uv run uvicorn backend.main:app
 
-Then open http://localhost:8089 to configure and start the test.
+In another terminal, run Locust (from project root):
+    uv run locust -f research/load-testing/locustfile.py --host http://localhost:8000
+
+Open http://localhost:8089 (Locust web UI) to configure and run tests.
+Recommended: 20 users, 5/sec spawn rate, 20-60s runtime.
+
+Headless mode:
+    uv run locust ... --users 20 --spawn-rate 5 --run-time 20s --headless
 """
 
 from locust import HttpUser, between, task
