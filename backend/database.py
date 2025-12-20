@@ -69,6 +69,84 @@ def _normalize_depth(depth: int) -> int:
     return max(depth, 0)
 
 
+def _get_language_families(conn) -> Dict[str, Dict[str, str]]:
+    """Load language families into a lookup dict."""
+    rows = conn.execute(
+        "SELECT lang_code, lang_name, family, branch FROM language_families"
+    ).fetchall()
+    return {
+        row[0]: {"name": row[1], "family": row[2], "branch": row[3]}
+        for row in rows
+    }
+
+
+def _get_enriched_definitions(conn) -> Dict[str, str]:
+    """Load enriched definitions from Free Dictionary API into a lookup dict.
+
+    Returns dict mapping lowercase lexeme -> definition string.
+    Uses lowercase keys for case-insensitive lookup.
+    """
+    # Check if the view exists (table might not be populated yet)
+    try:
+        rows = conn.execute(
+            "SELECT lower(lexeme), definition FROM v_definitions WHERE definition IS NOT NULL"
+        ).fetchall()
+        return {row[0]: row[1].strip('"') if row[1] else None for row in rows}
+    except Exception:
+        # Table/view doesn't exist yet
+        return {}
+
+
+def _make_node_id(lexeme: str, lang: str) -> str:
+    """Create a unique node ID combining lexeme and language."""
+    return f"{lexeme}|{lang}"
+
+
+def _build_node(
+    lexeme: str,
+    lang: str,
+    sense: str,
+    lang_families: Dict,
+    enriched_defs: Optional[Dict[str, str]] = None,
+) -> Dict:
+    """Build a rich node with all available metadata.
+
+    Args:
+        lexeme: The word
+        lang: Language code
+        sense: EtymDB sense/definition
+        lang_families: Language family lookup dict
+        enriched_defs: Optional dict of enriched definitions from Free Dictionary API
+    """
+    node = {
+        "id": _make_node_id(lexeme, lang),  # Unique ID includes language
+        "lexeme": lexeme,  # Display name
+        "lang": lang,
+    }
+
+    # Determine best definition to use
+    # Priority: enriched definition (for English) > EtymDB sense
+    definition = None
+    if enriched_defs and lang == "en" and lexeme.lower() in enriched_defs:
+        definition = enriched_defs[lexeme.lower()]
+    elif sense and sense.lower() != lexeme.lower():
+        definition = sense
+
+    if definition:
+        node["sense"] = definition
+
+    # Add language metadata if available
+    lang_info = lang_families.get(lang)
+    if lang_info:
+        node["lang_name"] = lang_info["name"]
+        node["family"] = lang_info["family"]
+        node["branch"] = lang_info["branch"]
+    else:
+        # Fallback: use lang code as name
+        node["lang_name"] = lang
+    return node
+
+
 def fetch_etymology(word: str, depth: int = 5) -> Optional[Dict]:
     """Return an etymology graph for *word* or ``None`` if absent."""
     if not word:
@@ -76,16 +154,28 @@ def fetch_etymology(word: str, depth: int = 5) -> Optional[Dict]:
 
     depth = _normalize_depth(depth)
     with _ConnectionManager() as conn:
+        # Load language families for enrichment
+        lang_families = _get_language_families(conn)
+        # Load enriched definitions from Free Dictionary API
+        enriched_defs = _get_enriched_definitions(conn)
+
+        # Prefer English words, then other languages
         start = conn.execute(
-            "SELECT word_ix, lang, lexeme FROM words WHERE lower(lexeme) = lower(?) LIMIT 1",
+            """
+            SELECT word_ix, lang, lexeme, sense
+            FROM words
+            WHERE lower(lexeme) = lower(?)
+            ORDER BY CASE WHEN lang = 'en' THEN 0 ELSE 1 END, word_ix
+            LIMIT 1
+            """,
             [word],
         ).fetchone()
         if not start:
             return None
 
-        start_ix, start_lang, start_lexeme = start
-        nodes: Dict[int, Dict[str, str]] = {
-            start_ix: {"id": start_lexeme, "lang": start_lang},
+        start_ix, start_lang, start_lexeme, start_sense = start
+        nodes: Dict[int, Dict] = {
+            start_ix: _build_node(start_lexeme, start_lang, start_sense, lang_families, enriched_defs),
         }
         edges = []
         seen_edges = set()
@@ -107,9 +197,11 @@ def fetch_etymology(word: str, depth: int = 5) -> Optional[Dict]:
                     child.word_ix AS child_ix,
                     child.lexeme AS child_lexeme,
                     child.lang AS child_lang,
+                    child.sense AS child_sense,
                     parent.word_ix AS parent_ix,
                     parent.lexeme AS parent_lexeme,
-                    parent.lang AS parent_lang
+                    parent.lang AS parent_lang,
+                    parent.sense AS parent_sense
                 FROM traversal tr
                 JOIN words child ON child.word_ix = tr.child_ix
                 JOIN words parent ON parent.word_ix = tr.parent_ix
@@ -117,13 +209,27 @@ def fetch_etymology(word: str, depth: int = 5) -> Optional[Dict]:
                 [start_ix, depth],
             ).fetchall()
 
-            for child_ix, child_lexeme, child_lang, parent_ix, parent_lexeme, parent_lang in records:
-                nodes.setdefault(child_ix, {"id": child_lexeme, "lang": child_lang})
-                nodes.setdefault(parent_ix, {"id": parent_lexeme, "lang": parent_lang})
-                edge_key = (child_lexeme, parent_lexeme)
+            for row in records:
+                child_ix, child_lexeme, child_lang, child_sense = row[:4]
+                parent_ix, parent_lexeme, parent_lang, parent_sense = row[4:]
+                nodes.setdefault(
+                    child_ix,
+                    _build_node(child_lexeme, child_lang, child_sense, lang_families, enriched_defs)
+                )
+                nodes.setdefault(
+                    parent_ix,
+                    _build_node(parent_lexeme, parent_lang, parent_sense, lang_families, enriched_defs)
+                )
+                # Create unique edge IDs using lexeme+lang
+                child_id = _make_node_id(child_lexeme, child_lang)
+                parent_id = _make_node_id(parent_lexeme, parent_lang)
+                # Skip true self-loops (same node)
+                if child_id == parent_id:
+                    continue
+                edge_key = (child_id, parent_id)
                 if edge_key not in seen_edges:
                     seen_edges.add(edge_key)
-                    edges.append({"source": child_lexeme, "target": parent_lexeme})
+                    edges.append({"source": child_id, "target": parent_id})
 
         return {"nodes": list(nodes.values()), "edges": edges}
 
@@ -159,3 +265,53 @@ def fetch_all_language_families() -> Dict[str, Dict[str, str]]:
             row[0]: {"name": row[1], "family": row[2], "branch": row[3]}
             for row in rows
         }
+
+
+def search_words(query: str, limit: int = 10) -> list[Dict[str, str]]:
+    """Search for English words matching the query (fuzzy prefix search).
+
+    Returns curated words that have etymology data, including tree size.
+    """
+    if not query or len(query) < 2:
+        return []
+
+    with _ConnectionManager() as conn:
+        # Search with ancestor count (number of direct etymology links)
+        # Uses simple join for fast autocomplete performance
+        rows = conn.execute(
+            """
+            WITH matches AS (
+                SELECT DISTINCT word_ix, lexeme, sense
+                FROM v_english_curated
+                WHERE lower(lexeme) LIKE lower(?) || '%'
+                ORDER BY
+                    CASE WHEN lower(lexeme) = lower(?) THEN 0 ELSE 1 END,
+                    length(lexeme),
+                    lexeme
+                LIMIT ?
+            ),
+            link_counts AS (
+                SELECT m.word_ix, COUNT(l.target) as ancestors
+                FROM matches m
+                LEFT JOIN links l ON l.source = m.word_ix
+                GROUP BY m.word_ix
+            )
+            SELECT m.lexeme, m.sense, COALESCE(lc.ancestors, 0) as ancestors
+            FROM matches m
+            LEFT JOIN link_counts lc ON m.word_ix = lc.word_ix
+            ORDER BY
+                CASE WHEN lower(m.lexeme) = lower(?) THEN 0 ELSE 1 END,
+                length(m.lexeme),
+                m.lexeme
+            """,
+            [query, query, limit, query],
+        ).fetchall()
+
+        return [
+            {
+                "word": row[0],
+                "sense": row[1] if row[1] and row[1].lower() != row[0].lower() else None,
+                "ancestors": row[2]  # Direct etymology links count
+            }
+            for row in rows
+        ]

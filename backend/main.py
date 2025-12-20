@@ -8,9 +8,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 try:  # Support execution via `python backend/main.py`
-    from .database import fetch_etymology, fetch_random_word
+    from .database import fetch_etymology, fetch_random_word, search_words
 except ImportError:  # pragma: no cover - fallback when run as a script
-    from database import fetch_etymology, fetch_random_word
+    from database import fetch_etymology, fetch_random_word, search_words
 
 app = FastAPI(title="Etymology Graph API")
 
@@ -37,6 +37,15 @@ def get_graph(word: str):
 def get_random_word():
     """Return a random English word from the dataset."""
     return fetch_random_word()
+
+
+@app.get("/search")
+def search(q: str = "", limit: int = 10):
+    """Search for words matching the query (autocomplete)."""
+    if len(q) < 2:
+        return {"results": []}
+    results = search_words(q, min(limit, 20))  # Cap at 20
+    return {"results": results}
 
 
 # Serve frontend static files (must be after API routes)

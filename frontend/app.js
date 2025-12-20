@@ -3,66 +3,7 @@
  * Interactive visualization of word origins using Cytoscape.js
  */
 
-// Language family color mapping
-const LANG_COLORS = {
-    // Modern languages
-    en: '#0284c7',
-    fr: '#0284c7',
-    de: '#0284c7',
-    es: '#0284c7',
-    it: '#0284c7',
-    pt: '#0284c7',
-    nl: '#0284c7',
-    sv: '#0284c7',
-    da: '#0284c7',
-    no: '#0284c7',
-
-    // Latin and Romance
-    la: '#7c3aed',
-    lat: '#7c3aed',
-    'old-french': '#7c3aed',
-    'middle-french': '#7c3aed',
-    'old-occitan': '#7c3aed',
-    'vulgar-latin': '#7c3aed',
-
-    // Greek
-    grc: '#059669',
-    'ancient-greek': '#059669',
-    'greek': '#059669',
-    el: '#059669',
-
-    // Germanic
-    'proto-germanic': '#ea580c',
-    'old-english': '#ea580c',
-    'middle-english': '#ea580c',
-    'old-high-german': '#ea580c',
-    'middle-high-german': '#ea580c',
-    'old-norse': '#ea580c',
-    'old-saxon': '#ea580c',
-    ang: '#ea580c',
-    enm: '#ea580c',
-    goh: '#ea580c',
-    gmh: '#ea580c',
-    non: '#ea580c',
-    osx: '#ea580c',
-    gem: '#ea580c',
-
-    // Proto-Indo-European
-    'proto-indo-european': '#dc2626',
-    ine: '#dc2626',
-    'pie': '#dc2626',
-
-    // Semitic
-    ar: '#d97706',
-    he: '#d97706',
-    'arabic': '#d97706',
-    'hebrew': '#d97706',
-    'proto-semitic': '#d97706',
-};
-
-const DEFAULT_COLOR = '#64748b';
-
-// Human-readable language names
+// Human-readable language names (fallback when not provided by API)
 const LANG_NAMES = {
     en: 'English',
     fr: 'French',
@@ -92,16 +33,24 @@ const LANG_NAMES = {
     ine: 'Proto-Indo-European',
 };
 
-function getLangColor(lang) {
-    if (!lang) return DEFAULT_COLOR;
-    const normalized = lang.toLowerCase().replace(/_/g, '-');
-    return LANG_COLORS[normalized] || DEFAULT_COLOR;
-}
-
 function getLangName(lang) {
     if (!lang) return 'Unknown';
     const normalized = lang.toLowerCase().replace(/_/g, '-');
     return LANG_NAMES[normalized] || lang;
+}
+
+// Truncate text to a maximum length
+function truncate(text, maxLength) {
+    if (!text || text.length <= maxLength) return text;
+    return text.slice(0, maxLength).trim() + '…';
+}
+
+// Build display label for node
+function buildNodeLabel(node) {
+    const langName = node.lang_name || getLangName(node.lang);
+    const displayWord = node.lexeme || node.id;
+    // Simple format for debugging: word (language)
+    return displayWord + '\n(' + langName.toLowerCase() + ')';
 }
 
 // DOM elements
@@ -116,9 +65,24 @@ const errorState = document.getElementById('error-state');
 const errorMessage = document.getElementById('error-message');
 const wordInfo = document.getElementById('word-info');
 const currentWord = document.getElementById('current-word');
-const legend = document.getElementById('legend');
+const langBreakdown = document.getElementById('lang-breakdown');
+const nodeDetail = document.getElementById('node-detail');
+const detailWord = document.getElementById('detail-word');
+const detailLang = document.getElementById('detail-lang');
+const detailFamily = document.getElementById('detail-family');
+const detailSense = document.getElementById('detail-sense');
+const detailClose = document.getElementById('detail-close');
+const suggestions = document.getElementById('suggestions');
+const directionIndicator = document.getElementById('direction-indicator');
 
 let cy = null;
+let searchTimeout = null;
+let selectedSuggestionIndex = -1;
+
+// Get layout direction based on viewport
+function getLayoutDirection() {
+    return window.innerWidth > window.innerHeight ? 'LR' : 'TB';
+}
 
 // Initialize Cytoscape
 function initCytoscape() {
@@ -131,27 +95,26 @@ function initCytoscape() {
                     'label': 'data(label)',
                     'text-valign': 'center',
                     'text-halign': 'center',
-                    'background-color': 'data(color)',
-                    'color': '#fff',
-                    'font-size': '12px',
-                    'font-weight': '500',
-                    'text-outline-color': 'data(color)',
-                    'text-outline-width': '2px',
+                    'text-wrap': 'wrap',
+                    'text-max-width': '140px',
+                    'background-color': '#f8fafc',
+                    'color': '#1c1917',
+                    'font-size': '13px',
+                    'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
                     'width': 'label',
                     'height': 'label',
                     'padding': '12px',
                     'shape': 'round-rectangle',
-                    'border-width': '2px',
-                    'border-color': 'data(color)',
-                    'border-opacity': 0.3,
+                    'border-width': '1px',
+                    'border-color': '#cbd5e1',
                 },
             },
             {
                 selector: 'node:selected',
                 style: {
-                    'border-width': '3px',
-                    'border-color': '#1c1917',
-                    'border-opacity': 1,
+                    'border-width': '2px',
+                    'border-color': '#0284c7',
+                    'background-color': '#f0f9ff',
                 },
             },
             {
@@ -179,15 +142,71 @@ function initCytoscape() {
         wheelSensitivity: 0.3,
     });
 
+    // Show detail panel on node click
+    cy.on('tap', 'node', (e) => {
+        const node = e.target;
+        showNodeDetail(node.data());
+    });
+
+    // Hide detail when clicking background
+    cy.on('tap', (e) => {
+        if (e.target === cy) {
+            hideNodeDetail();
+        }
+    });
+
     // Add tooltip on node hover
     cy.on('mouseover', 'node', (e) => {
         const node = e.target;
-        cyContainer.title = `${node.data('label')} (${getLangName(node.data('lang'))})`;
+        const sense = node.data('sense');
+        const langName = node.data('langName') || getLangName(node.data('lang'));
+        let tip = `${node.data('word')} (${langName})`;
+        if (sense) tip += `\n"${sense}"`;
+        cyContainer.title = tip;
+        cyContainer.style.cursor = 'pointer';
     });
 
     cy.on('mouseout', 'node', () => {
         cyContainer.title = '';
+        cyContainer.style.cursor = 'default';
     });
+}
+
+// Show node detail panel
+function showNodeDetail(data) {
+    if (!nodeDetail || !detailWord || !detailLang) return;
+
+    detailWord.textContent = data.word;
+    detailLang.textContent = data.langName || getLangName(data.lang);
+
+    // Show family and branch if available
+    if (detailFamily && detailFamily.parentElement) {
+        if (data.family) {
+            detailFamily.textContent = `${data.family}${data.branch ? ' → ' + data.branch : ''}`;
+            detailFamily.parentElement.classList.remove('hidden');
+        } else {
+            detailFamily.parentElement.classList.add('hidden');
+        }
+    }
+
+    // Show sense/definition if available (truncate long definitions)
+    if (detailSense && detailSense.parentElement) {
+        if (data.sense) {
+            detailSense.textContent = truncate(data.sense, 150);
+            detailSense.parentElement.classList.remove('hidden');
+        } else {
+            detailSense.parentElement.classList.add('hidden');
+        }
+    }
+
+    nodeDetail.classList.remove('hidden');
+}
+
+// Hide node detail panel
+function hideNodeDetail() {
+    if (nodeDetail) {
+        nodeDetail.classList.add('hidden');
+    }
 }
 
 // Show/hide states
@@ -196,6 +215,7 @@ function showLoading() {
     emptyState.classList.add('hidden');
     errorState.classList.add('hidden');
     wordInfo.classList.add('hidden');
+    if (directionIndicator) directionIndicator.classList.add('hidden');
     if (cy) cy.elements().remove();
 }
 
@@ -205,6 +225,7 @@ function showError(message) {
     errorState.classList.remove('hidden');
     errorMessage.textContent = message;
     wordInfo.classList.add('hidden');
+    if (directionIndicator) directionIndicator.classList.add('hidden');
 }
 
 function showGraph() {
@@ -242,27 +263,40 @@ function renderGraph(data, searchedWord) {
         return;
     }
 
+    // Hide any open detail panel
+    hideNodeDetail();
+
     // Build Cytoscape elements
     const elements = [];
-    const seenLangs = new Set();
+    const seenLangs = new Map(); // lang code -> display name
+    const langCounts = new Map(); // lang name -> count
 
     // Add nodes
     data.nodes.forEach((node) => {
-        const color = getLangColor(node.lang);
-        seenLangs.add(node.lang);
+        const langName = node.lang_name || getLangName(node.lang);
+        const displayWord = node.lexeme || node.id;
+        seenLangs.set(node.lang, langName);
+        langCounts.set(langName, (langCounts.get(langName) || 0) + 1);
+
         elements.push({
             group: 'nodes',
             data: {
-                id: node.id,
-                label: node.id,
+                id: node.id,  // Unique ID (lexeme|lang)
+                word: displayWord,  // Display word
+                label: buildNodeLabel(node),
                 lang: node.lang,
-                color: color,
+                langName: langName,
+                sense: node.sense || null,
+                hasSense: !!node.sense,  // Flag for CSS selector
+                family: node.family || null,
+                branch: node.branch || null,
             },
         });
     });
 
-    // Add edges
+    // Add edges (filter out self-loops where source equals target)
     data.edges.forEach((edge) => {
+        if (edge.source === edge.target) return; // Skip self-loops
         elements.push({
             group: 'edges',
             data: {
@@ -277,13 +311,14 @@ function renderGraph(data, searchedWord) {
     cy.elements().remove();
     cy.add(elements);
 
-    // Apply dagre layout (hierarchical, top-to-bottom)
+    // Apply dagre layout (responsive direction)
+    const direction = getLayoutDirection();
     cy.layout({
         name: 'dagre',
-        rankDir: 'TB',
-        nodeSep: 60,
-        rankSep: 80,
-        padding: 40,
+        rankDir: direction,
+        nodeSep: direction === 'LR' ? 40 : 30,
+        rankSep: direction === 'LR' ? 80 : 60,
+        padding: 30,
         animate: true,
         animationDuration: 500,
         animationEasing: 'ease-out',
@@ -294,33 +329,43 @@ function renderGraph(data, searchedWord) {
         cy.fit(undefined, 40);
     }, 550);
 
+    // Update direction indicator
+    if (directionIndicator) {
+        directionIndicator.classList.remove('hidden', 'vertical');
+        const arrow = directionIndicator.querySelector('.direction-arrow');
+        if (direction === 'TB') {
+            directionIndicator.classList.add('vertical');
+            if (arrow) arrow.textContent = '↓';
+        } else {
+            if (arrow) arrow.textContent = '→';
+        }
+    }
+
     // Update word info
     currentWord.textContent = searchedWord;
-    updateLegend(seenLangs);
+    updateInfoSummary(seenLangs, langCounts);
     wordInfo.classList.remove('hidden');
     showGraph();
 }
 
-// Update legend with languages in current graph
-function updateLegend(langs) {
-    legend.innerHTML = '';
-    const sortedLangs = Array.from(langs).sort();
+// Update info summary with language breakdown
+function updateInfoSummary(langMap, langCounts) {
+    if (!langBreakdown) return;
 
-    sortedLangs.forEach((lang) => {
-        const item = document.createElement('div');
-        item.className = 'legend-item';
-
-        const dot = document.createElement('span');
-        dot.className = 'legend-dot';
-        dot.style.backgroundColor = getLangColor(lang);
-
-        const label = document.createElement('span');
-        label.textContent = getLangName(lang);
-
-        item.appendChild(dot);
-        item.appendChild(label);
-        legend.appendChild(item);
+    // Sort by count descending, then by name
+    const sorted = Array.from(langCounts.entries()).sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0]);
     });
+
+    langBreakdown.innerHTML = sorted
+        .map(([langName, count]) => `
+            <span class="lang-chip">
+                <span class="lang-chip-name">${langName}</span>
+                <span class="lang-chip-count">${count}</span>
+            </span>
+        `)
+        .join('');
 }
 
 // Search handler
@@ -356,17 +401,178 @@ async function handleRandom() {
     }
 }
 
+// Autocomplete functions
+async function fetchSuggestions(query) {
+    if (query.length < 2) {
+        hideSuggestions();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        showSuggestions(data.results);
+    } catch (err) {
+        console.error('Search error:', err);
+    }
+}
+
+function showSuggestions(results) {
+    if (!suggestions || results.length === 0) {
+        hideSuggestions();
+        return;
+    }
+
+    selectedSuggestionIndex = -1;
+    suggestions.innerHTML = results
+        .map(
+            (r, i) => `
+            <div class="suggestion-item" data-index="${i}" data-word="${r.word}">
+                <div class="suggestion-main">
+                    <span class="suggestion-word">${r.word}</span>
+                    ${r.ancestors > 0 ? `<span class="suggestion-ancestors">${r.ancestors} ${r.ancestors === 1 ? 'ancestor' : 'ancestors'}</span>` : '<span class="suggestion-ancestors single">no etymology</span>'}
+                </div>
+                ${r.sense ? `<div class="suggestion-sense">${truncate(r.sense, 60)}</div>` : ''}
+            </div>
+        `
+        )
+        .join('');
+
+    suggestions.classList.remove('hidden');
+
+    // Add click handlers
+    suggestions.querySelectorAll('.suggestion-item').forEach((item) => {
+        item.addEventListener('click', () => {
+            selectSuggestion(item.dataset.word);
+        });
+    });
+}
+
+function hideSuggestions() {
+    if (suggestions) {
+        suggestions.classList.add('hidden');
+        suggestions.innerHTML = '';
+    }
+    selectedSuggestionIndex = -1;
+}
+
+function selectSuggestion(word) {
+    wordInput.value = word;
+    hideSuggestions();
+    handleSearch();
+}
+
+function navigateSuggestions(direction) {
+    const items = suggestions.querySelectorAll('.suggestion-item');
+    if (items.length === 0) return;
+
+    // Remove previous selection
+    items.forEach((item) => item.classList.remove('selected'));
+
+    // Update index
+    selectedSuggestionIndex += direction;
+    if (selectedSuggestionIndex < 0) selectedSuggestionIndex = items.length - 1;
+    if (selectedSuggestionIndex >= items.length) selectedSuggestionIndex = 0;
+
+    // Apply selection
+    items[selectedSuggestionIndex].classList.add('selected');
+    items[selectedSuggestionIndex].scrollIntoView({ block: 'nearest' });
+}
+
 // Event listeners
 searchBtn.addEventListener('click', handleSearch);
 randomBtn.addEventListener('click', handleRandom);
 
+// Input event for autocomplete
+wordInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        fetchSuggestions(e.target.value.trim());
+    }, 150); // Debounce 150ms
+});
+
 wordInput.addEventListener('keydown', (e) => {
+    const isOpen = suggestions && !suggestions.classList.contains('hidden');
+
     if (e.key === 'Enter') {
-        handleSearch();
+        if (isOpen && selectedSuggestionIndex >= 0) {
+            const items = suggestions.querySelectorAll('.suggestion-item');
+            if (items[selectedSuggestionIndex]) {
+                selectSuggestion(items[selectedSuggestionIndex].dataset.word);
+            }
+        } else {
+            hideSuggestions();
+            handleSearch();
+        }
+        e.preventDefault();
+    } else if (e.key === 'ArrowDown' && isOpen) {
+        navigateSuggestions(1);
+        e.preventDefault();
+    } else if (e.key === 'ArrowUp' && isOpen) {
+        navigateSuggestions(-1);
+        e.preventDefault();
+    } else if (e.key === 'Escape') {
+        hideSuggestions();
     }
 });
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrapper')) {
+        hideSuggestions();
+    }
+});
+
+// Modal functionality
+const aboutBtn = document.getElementById('about-btn');
+const aboutModal = document.getElementById('about-modal');
+const aboutClose = document.getElementById('about-close');
+const modalBackdrop = aboutModal?.querySelector('.modal-backdrop');
+const modalTabs = aboutModal?.querySelectorAll('.modal-tab');
+
+function openAboutModal() {
+    if (aboutModal) aboutModal.classList.remove('hidden');
+}
+
+function closeAboutModal() {
+    if (aboutModal) aboutModal.classList.add('hidden');
+}
+
+function switchTab(tabName) {
+    // Update tab buttons
+    modalTabs?.forEach((tab) => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach((content) => {
+        content.classList.toggle('active', content.id === `tab-${tabName}`);
+    });
+}
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
     initCytoscape();
+
+    // Close button for detail panel
+    if (detailClose) {
+        detailClose.addEventListener('click', hideNodeDetail);
+    }
+
+    // About modal
+    if (aboutBtn) aboutBtn.addEventListener('click', openAboutModal);
+    if (aboutClose) aboutClose.addEventListener('click', closeAboutModal);
+    if (modalBackdrop) modalBackdrop.addEventListener('click', closeAboutModal);
+
+    // Tab switching
+    modalTabs?.forEach((tab) => {
+        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+
+    // Close modal on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && aboutModal && !aboutModal.classList.contains('hidden')) {
+            closeAboutModal();
+        }
+    });
 });

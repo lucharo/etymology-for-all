@@ -5,6 +5,7 @@ description = "Backend API for the Etymology Graph Explorer"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [
+    "aiohttp>=3.13.2",
     "altair>=6.0.0",
     "duckdb>=1.4.0",
     "fastapi>=0.116.2",

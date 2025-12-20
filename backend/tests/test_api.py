@@ -62,6 +62,35 @@ def _prepare_test_database() -> None:
             )
         """)
 
+        # Definitions enrichment table
+        conn.execute("""
+            CREATE TABLE definitions_raw (
+                lexeme VARCHAR PRIMARY KEY,
+                api_response JSON,
+                fetched_at TIMESTAMP,
+                status VARCHAR
+            )
+        """)
+        # Insert a test definition
+        conn.execute("""
+            INSERT INTO definitions_raw VALUES (
+                'mother',
+                '[{"word": "mother", "meanings": [{"partOfSpeech": "noun", "definitions": [{"definition": "A female parent"}]}]}]',
+                '2024-12-19 10:00:00',
+                'success'
+            )
+        """)
+        conn.execute("""
+            CREATE VIEW v_definitions AS
+            SELECT
+                lexeme,
+                CAST(api_response->'$[0]'->'meanings'->'$[0]'->'definitions'->'$[0]'->'definition' AS VARCHAR) as definition,
+                CAST(api_response->'$[0]'->'meanings'->'$[0]'->'partOfSpeech' AS VARCHAR) as part_of_speech,
+                CAST(api_response->'$[0]'->'phonetic' AS VARCHAR) as phonetic
+            FROM definitions_raw
+            WHERE status = 'success'
+        """)
+
 
 _prepare_test_database()
 
@@ -76,7 +105,8 @@ def test_graph_endpoint_returns_nodes_and_edges():
     payload = response.json()
     assert payload["nodes"]
     assert payload["edges"]
-    assert any(node["id"] == "mother" for node in payload["nodes"])
+    # Node ID is now lexeme|lang format
+    assert any(node["lexeme"] == "mother" for node in payload["nodes"])
 
 
 def test_graph_endpoint_missing_word():
@@ -90,3 +120,21 @@ def test_random_endpoint_returns_word():
     # Only "mother" is in v_english_curated (has etymology, is clean)
     # "river" has no etymology links so it's excluded
     assert response.json()["word"] == "mother"
+
+
+def test_enriched_definition_used_for_english_words():
+    """Test that enriched definitions from Free Dictionary API are used."""
+    response = client.get("/graph/mother")
+    assert response.status_code == 200
+    payload = response.json()
+
+    # Find the English "mother" node
+    mother_node = next(
+        (n for n in payload["nodes"] if n["lexeme"] == "mother" and n["lang"] == "en"),
+        None
+    )
+    assert mother_node is not None
+
+    # Should use enriched definition instead of EtymDB sense
+    assert "sense" in mother_node
+    assert mother_node["sense"] == "A female parent"
