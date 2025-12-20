@@ -45,6 +45,23 @@ function truncate(text, maxLength) {
     return text.slice(0, maxLength).trim() + '…';
 }
 
+// Handle API errors with user-friendly messages
+async function handleApiResponse(response, context = 'request') {
+    if (response.ok) return response;
+
+    if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After') || '60';
+        throw new Error(`Too many requests. Please wait ${retryAfter} seconds and try again.`);
+    }
+    if (response.status === 404) {
+        throw new Error(`Word not found in the database`);
+    }
+    if (response.status >= 500) {
+        throw new Error(`Server is temporarily unavailable. Please try again in a moment.`);
+    }
+    throw new Error(`Failed to complete ${context}`);
+}
+
 // Build display label for node
 function buildNodeLabel(node) {
     const langName = node.lang_name || getLangName(node.lang);
@@ -237,21 +254,14 @@ function showGraph() {
 // Fetch etymology data
 async function fetchEtymology(word) {
     const response = await fetch(`/graph/${encodeURIComponent(word)}`);
-    if (!response.ok) {
-        if (response.status === 404) {
-            throw new Error(`"${word}" not found in the database`);
-        }
-        throw new Error('Failed to fetch etymology data');
-    }
+    await handleApiResponse(response, 'etymology lookup');
     return response.json();
 }
 
 // Fetch random word
 async function fetchRandomWord() {
     const response = await fetch('/random');
-    if (!response.ok) {
-        throw new Error('Failed to fetch random word');
-    }
+    await handleApiResponse(response, 'random word');
     const data = await response.json();
     return data.word;
 }
@@ -410,10 +420,15 @@ async function fetchSuggestions(query) {
 
     try {
         const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
+        if (response.status === 429) {
+            // Silently ignore rate limits for autocomplete (non-critical)
+            return;
+        }
         if (!response.ok) return;
         const data = await response.json();
         showSuggestions(data.results);
     } catch (err) {
+        // Silently fail for autocomplete - don't disrupt typing
         console.error('Search error:', err);
     }
 }
