@@ -2,3 +2,7 @@ __pycache__/
 backend/__pycache__/
 backend/tests/__pycache__/
 .venv/
+
+# Data files (large, downloaded/generated locally)
+backend/data/*.duckdb
+backend/data/*.csv
