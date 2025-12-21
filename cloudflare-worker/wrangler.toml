@@ -1,0 +1,8 @@
+name = "etymology-proxy"
+main = "worker.js"
+compatibility_date = "2025-12-21"
+
+# Custom domain - Cloudflare handles DNS + SSL automatically
+routes = [
+  { pattern = "etymology.luischav.es", custom_domain = true }
+]
