@@ -160,13 +160,18 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
         # Load language families (small table, 53 rows)
         lang_families = _get_language_families(conn)
 
-        # Find starting word (prefer English)
+        # Find starting word (prefer English, then most etymology links)
         start = conn.execute(
             """
-            SELECT word_ix, lang, lexeme, sense
-            FROM words
-            WHERE lower(lexeme) = lower(?)
-            ORDER BY CASE WHEN lang = 'en' THEN 0 ELSE 1 END, word_ix
+            SELECT w.word_ix, w.lang, w.lexeme, w.sense
+            FROM words w
+            LEFT JOIN links l ON l.source = w.word_ix
+            WHERE lower(w.lexeme) = lower(?)
+            GROUP BY w.word_ix, w.lang, w.lexeme, w.sense
+            ORDER BY
+                CASE WHEN w.lang = 'en' THEN 0 ELSE 1 END,
+                COUNT(l.target) DESC,
+                w.word_ix
             LIMIT 1
             """,
             [word],
