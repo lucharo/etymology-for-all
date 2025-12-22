@@ -85,13 +85,12 @@ def _get_definitions_for_lexemes(conn, lexemes: list[str]) -> dict[str, str]:
     if not lexemes:
         return {}
     try:
-        # Query only the specific lexemes we need
         placeholders = ",".join(["?" for _ in lexemes])
         rows = conn.execute(
             f"""
-            SELECT lower(lexeme), definition
-            FROM v_definitions
-            WHERE lower(lexeme) IN ({placeholders}) AND definition IS NOT NULL
+            SELECT lexeme, definition
+            FROM definitions
+            WHERE lexeme IN ({placeholders}) AND definition IS NOT NULL
             """,
             [lex.lower() for lex in lexemes],
         ).fetchall()
@@ -299,12 +298,12 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
         return []
 
     with _ConnectionManager() as conn:
-        # Single query with JOIN (definitions table is materialized, so this is fast)
+        # Single query with JOIN (definitions.lexeme is lowercase for fast equality)
         rows = conn.execute(
             """
             SELECT w.lexeme, w.sense, d.definition
             FROM v_english_curated w
-            LEFT JOIN v_definitions d ON lower(d.lexeme) = lower(w.lexeme)
+            LEFT JOIN definitions d ON d.lexeme = lower(w.lexeme)
             WHERE lower(w.lexeme) LIKE lower(?) || '%'
             ORDER BY
                 CASE WHEN lower(w.lexeme) = lower(?) THEN 0 ELSE 1 END,

@@ -104,13 +104,16 @@ def materialize_definitions(conn: duckdb.DuckDBPyConnection) -> None:
 
     This avoids JSON parsing on every query. The raw JSON is kept in
     definitions_raw for debugging/reprocessing if needed.
+
+    Lexeme is stored lowercase for fast equality joins.
     """
     print("Materializing definitions table...")
     conn.execute("DROP TABLE IF EXISTS definitions")
+    conn.execute("DROP VIEW IF EXISTS v_definitions")  # Remove legacy view
     conn.execute("""
         CREATE TABLE definitions AS
         SELECT
-            lexeme,
+            lower(lexeme) as lexeme,
             CAST(api_response->'$[0]'->'meanings'->'$[0]'->'definitions'->'$[0]'->'definition' AS VARCHAR) as definition,
             CAST(api_response->'$[0]'->'meanings'->'$[0]'->'partOfSpeech' AS VARCHAR) as part_of_speech,
             CAST(api_response->'$[0]'->'phonetic' AS VARCHAR) as phonetic
@@ -118,12 +121,6 @@ def materialize_definitions(conn: duckdb.DuckDBPyConnection) -> None:
         WHERE status = 'success'
     """)
     conn.execute("CREATE INDEX idx_definitions_lexeme ON definitions(lexeme)")
-
-    # Create view that points to the table for backwards compatibility
-    conn.execute("""
-        CREATE OR REPLACE VIEW v_definitions AS
-        SELECT * FROM definitions
-    """)
 
     count = conn.execute("SELECT COUNT(*) FROM definitions").fetchone()[0]
     print(f"  Materialized {count:,} definitions")

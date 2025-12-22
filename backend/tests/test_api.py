@@ -77,33 +77,17 @@ def _prepare_test_database() -> None:
             )
         """)
 
-        # Definitions enrichment table
+        # Definitions table (lexeme is lowercase for fast equality joins)
         conn.execute("""
-            CREATE TABLE definitions_raw (
+            CREATE TABLE definitions (
                 lexeme VARCHAR PRIMARY KEY,
-                api_response JSON,
-                fetched_at TIMESTAMP,
-                status VARCHAR
-            )
-        """)
-        # Insert a test definition
-        conn.execute("""
-            INSERT INTO definitions_raw VALUES (
-                'mother',
-                '[{"word": "mother", "meanings": [{"partOfSpeech": "noun", "definitions": [{"definition": "A female parent"}]}]}]',
-                '2024-12-19 10:00:00',
-                'success'
+                definition VARCHAR,
+                part_of_speech VARCHAR,
+                phonetic VARCHAR
             )
         """)
         conn.execute("""
-            CREATE VIEW v_definitions AS
-            SELECT
-                lexeme,
-                CAST(api_response->'$[0]'->'meanings'->'$[0]'->'definitions'->'$[0]'->'definition' AS VARCHAR) as definition,
-                CAST(api_response->'$[0]'->'meanings'->'$[0]'->'partOfSpeech' AS VARCHAR) as part_of_speech,
-                CAST(api_response->'$[0]'->'phonetic' AS VARCHAR) as phonetic
-            FROM definitions_raw
-            WHERE status = 'success'
+            INSERT INTO definitions VALUES ('mother', 'A female parent', 'noun', NULL)
         """)
 
 

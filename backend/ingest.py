@@ -186,6 +186,7 @@ def main() -> None:
         # ============================================================
 
         # Table to store raw API responses from Free Dictionary API
+        # After enrichment, run --materialize to create the `definitions` table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS definitions_raw (
                 lexeme VARCHAR PRIMARY KEY,
@@ -193,18 +194,6 @@ def main() -> None:
                 fetched_at TIMESTAMP,
                 status VARCHAR
             )
-        """)
-
-        # View to extract clean definitions from API responses
-        conn.execute("""
-            CREATE OR REPLACE VIEW v_definitions AS
-            SELECT
-                lexeme,
-                CAST(api_response->'$[0]'->'meanings'->'$[0]'->'definitions'->'$[0]'->'definition' AS VARCHAR) as definition,
-                CAST(api_response->'$[0]'->'meanings'->'$[0]'->'partOfSpeech' AS VARCHAR) as part_of_speech,
-                CAST(api_response->'$[0]'->'phonetic' AS VARCHAR) as phonetic
-            FROM definitions_raw
-            WHERE status = 'success'
         """)
 
 
