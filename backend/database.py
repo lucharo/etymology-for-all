@@ -287,7 +287,7 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
         return []
 
     with _ConnectionManager() as conn:
-        # Search with ancestor count (number of direct etymology links)
+        # Search with enriched definitions from Free Dictionary API
         # Deduplicate by lexeme, keeping the entry with the most etymology links
         rows = conn.execute(
             """
@@ -299,20 +299,21 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
                 GROUP BY w.word_ix, w.lexeme, w.sense
             ),
             best_per_lexeme AS (
-                SELECT lexeme, sense, ancestors,
+                SELECT word_ix, lexeme, sense, ancestors,
                        ROW_NUMBER() OVER (
                            PARTITION BY lower(lexeme)
                            ORDER BY ancestors DESC, word_ix
                        ) as rn
                 FROM word_links
             )
-            SELECT lexeme, sense, ancestors
-            FROM best_per_lexeme
-            WHERE rn = 1
+            SELECT b.lexeme, COALESCE(d.definition, b.sense) as definition, b.ancestors
+            FROM best_per_lexeme b
+            LEFT JOIN v_definitions d ON lower(d.lexeme) = lower(b.lexeme)
+            WHERE b.rn = 1
             ORDER BY
-                CASE WHEN lower(lexeme) = lower(?) THEN 0 ELSE 1 END,
-                length(lexeme),
-                lexeme
+                CASE WHEN lower(b.lexeme) = lower(?) THEN 0 ELSE 1 END,
+                length(b.lexeme),
+                b.lexeme
             LIMIT ?
             """,
             [query, query, limit],
@@ -321,8 +322,8 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
         return [
             {
                 "word": row[0],
-                "sense": row[1] if row[1] and row[1].lower() != row[0].lower() else None,
-                "ancestors": row[2],  # Direct etymology links count
+                "sense": row[1].strip('"') if row[1] and row[1].lower() != row[0].lower() else None,
+                "ancestors": row[2],  # Direct etymology links count (kept for tests)
             }
             for row in rows
         ]
