@@ -280,25 +280,27 @@ def fetch_all_language_families() -> dict[str, dict[str, str]]:
 def _is_useful_sense(sense: str | None, lexeme: str) -> bool:
     """Check if a sense provides useful information beyond the lexeme itself.
 
-    Note: sense="None" entries are meta-lexemes (hub nodes for cognate networks).
+    Note: NULL/None senses are meta-lexemes (hub nodes for cognate networks).
     These are kept as useful - they represent canonical forms that other words
     point to via cognate/borrowing links.
     """
-    if not sense:
-        return False
+    # NULL sense = meta-lexeme (hub node) - this IS useful
+    if sense is None:
+        return True
     sense_lower = sense.lower().strip('"')
     lexeme_lower = lexeme.lower()
-    # Not useful: NULL, empty, or equals lexeme
-    # Note: "none" IS useful - it marks meta-lexemes (canonical hub forms)
+    # Not useful: empty string or equals lexeme
     return sense_lower != "" and sense_lower != lexeme_lower
 
 
-def _format_sense_for_display(sense: str) -> str:
+def _format_sense_for_display(sense: str | None) -> str:
     """Format a sense for display in the UI.
 
-    Renames 'None' to 'MetaLexeme' for clarity - these are canonical hub forms
+    NULL/None senses become 'MetaLexeme' - these are canonical hub forms
     that cognates/borrowings point to.
     """
+    if sense is None:
+        return "MetaLexeme"
     cleaned = sense.strip('"')
     if cleaned.lower() == "none":
         return "MetaLexeme"
@@ -353,7 +355,7 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
             if useful_senses:
                 # Show all entries with useful senses
                 for sense in useful_senses:
-                    display = _format_sense_for_display(sense) if sense else None
+                    display = _format_sense_for_display(sense)
                     results.append({"word": lexeme, "sense": display})
             else:
                 # No useful senses - show one entry with Free Dictionary definition

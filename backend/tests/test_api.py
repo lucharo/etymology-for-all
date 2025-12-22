@@ -36,8 +36,8 @@ def _prepare_test_database() -> None:
                 (102, "proto-germanic", "twinjaz", "twin"),
                 (103, "proto-indo-european", "dwóh₁", "two"),
                 (104, "la", "geminus", "twin"),
-                # Meta-lexeme: sense="None" is a hub for cognates
-                (200, "en", "friend", "None"),  # Meta-lexeme (hub node)
+                # Meta-lexeme: sense=NULL is a hub for cognates
+                (200, "en", "friend", None),  # Meta-lexeme (hub node)
                 (201, "de", "Freund", "friend"),  # German cognate
                 (202, "proto-germanic", "frijōndz", "friend"),  # Proto-Germanic ancestor
             ],
@@ -189,7 +189,7 @@ def test_enriched_definition_used_for_english_words():
 
 
 def test_metalexeme_displayed_in_search():
-    """Test that sense='None' entries are shown as 'MetaLexeme' in search results.
+    """Test that sense=NULL entries are shown as 'MetaLexeme' in search results.
 
     Meta-lexemes are canonical hub forms that cognates/borrowings point to.
     They should NOT be filtered out, but displayed with 'MetaLexeme' label.
