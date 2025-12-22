@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=14">
+    <link rel="stylesheet" href="styles.css?v=15">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
@@ -176,6 +176,17 @@
                         <li><strong>Arrows</strong> point from modern words to their ancestors</li>
                         <li><strong>Click any word</strong> to see its language family and definition</li>
                         <li><strong>Language families</strong> show how languages are historically related</li>
+                    </ul>
+                    <h3>Links vs Graph Size</h3>
+                    <p>
+                        The <strong>"N links"</strong> shown in search results counts direct connections from that word.
+                        The actual graph may show many more nodes because it follows those links recursively
+                        (up to 5 levels deep), including:
+                    </p>
+                    <ul>
+                        <li><strong>Ancestors</strong> — words this word inherited from (e.g., Old English → Proto-Germanic)</li>
+                        <li><strong>Cognates</strong> — related words in other languages that share a common ancestor
+                            (e.g., English "friend", German "Freund", Dutch "vriend")</li>
                     </ul>
                     <h3>Limitations</h3>
                     <p>
