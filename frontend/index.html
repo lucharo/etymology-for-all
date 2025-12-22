@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=16">
+    <link rel="stylesheet" href="styles.css?v=17">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
@@ -182,15 +182,14 @@
                         Example: English "friend", German "Freund", Dutch "vriend", Gothic "frijōnds"
                         — all from Proto-Germanic "*frijōndz"
                     </p>
-                    <h3>Links vs Graph Size</h3>
+                    <h3>Graph Traversal</h3>
                     <p>
-                        <strong>"N links"</strong> counts direct edges from the searched word — its immediate
-                        connections (ancestors + cognates). The graph is larger because it traverses those
-                        links recursively up to 5 levels deep.
+                        The graph follows etymology connections recursively up to 5 levels deep,
+                        including both ancestors and cognates.
                     </p>
                     <p class="example">
-                        Example: "friend" has 12 direct links (1 ancestor + 11 cognates). Following each
-                        of those 12 connections recursively for 5 levels yields 28 total nodes.
+                        Example: "friend" connects to 12 words directly. Following each of those
+                        recursively for 5 levels yields 28 total nodes in the graph.
                     </p>
                     <h3>Language Family</h3>
                     <p>
@@ -233,6 +232,6 @@
         <p>Built by <a href="https://github.com/lucharo" target="_blank" rel="noopener">@lucharo</a> · <a href="https://github.com/lucharo/etymology-for-all" target="_blank" rel="noopener">Source code</a></p>
     </footer>
 
-    <script src="app.js?v=16"></script>
+    <script src="app.js?v=17"></script>
 </body>
 </html>

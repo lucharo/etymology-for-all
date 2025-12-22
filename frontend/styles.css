@@ -144,27 +144,9 @@ h1 {
     background: var(--accent-light);
 }
 
-.suggestion-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--space-sm);
-}
-
 .suggestion-word {
     font-weight: 500;
     color: var(--text);
-}
-
-.suggestion-ancestors {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    white-space: nowrap;
-}
-
-.suggestion-ancestors.single {
-    color: #d97706;
-    font-style: italic;
 }
 
 .suggestion-sense {
