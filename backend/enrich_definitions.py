@@ -230,28 +230,14 @@ def get_stats() -> None:
             print(f"  {status}: {count:,}")
 
 
-def run_materialize() -> None:
-    """Just materialize definitions without fetching new ones."""
-    db_path = database_path()
-    with duckdb.connect(db_path.as_posix()) as conn:
-        materialize_definitions(conn)
-
-
 def main():
     parser = argparse.ArgumentParser(description="Enrich etymology database with definitions")
     parser.add_argument("--stats", action="store_true", help="Show enrichment statistics")
     parser.add_argument("--test", type=int, metavar="N", help="Test mode: only process N words")
-    parser.add_argument(
-        "--materialize",
-        action="store_true",
-        help="Just materialize definitions table (no API calls)",
-    )
     args = parser.parse_args()
 
     if args.stats:
         get_stats()
-    elif args.materialize:
-        run_materialize()
     else:
         asyncio.run(enrich_definitions(max_words=args.test))
 
