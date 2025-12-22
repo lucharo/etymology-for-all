@@ -30,6 +30,12 @@ def _prepare_test_database() -> None:
                 (2, "proto-germanic", "mōdēr", "mother"),
                 (3, "proto-indo-european", "méh₂tēr", "mother"),
                 (4, "en", "loneword", "a word with no etymology links"),
+                # Duplicate entries for "twin" - tests that we pick the one with most links
+                (100, "en", "twin", "twin sense A"),  # This has 1 link
+                (101, "en", "twin", "twin sense B"),  # This has 3 links (should be picked)
+                (102, "proto-germanic", "twinjaz", "twin"),
+                (103, "proto-indo-european", "dwóh₁", "two"),
+                (104, "la", "geminus", "twin"),
             ],
         )
         conn.executemany(
@@ -37,6 +43,14 @@ def _prepare_test_database() -> None:
             [
                 ("inh", 1, 2),
                 ("inh", 2, 3),
+                # twin entry 100 has 1 link
+                ("inh", 100, 102),
+                # twin entry 101 has 3 links (richer etymology)
+                ("inh", 101, 102),
+                ("cog", 101, 103),
+                ("cog", 101, 104),
+                # Continue the chain
+                ("inh", 102, 103),
             ],
         )
         conn.execute("CREATE INDEX idx_words_word_ix ON words(word_ix)")
@@ -125,9 +139,42 @@ def test_graph_endpoint_word_without_etymology():
 def test_random_endpoint_returns_word():
     response = client.get("/random")
     assert response.status_code == 200
-    # Only "mother" is in v_english_curated (has etymology, is clean)
-    # "river" has no etymology links so it's excluded
-    assert response.json()["word"] == "mother"
+    # "mother" and "twin" are in v_english_curated (has etymology, is clean)
+    # "loneword" has no etymology links so it's excluded
+    assert response.json()["word"] in ["mother", "twin"]
+
+
+def test_graph_picks_entry_with_most_links():
+    """Test that when duplicate entries exist, we pick the one with most etymology links."""
+    response = client.get("/graph/twin")
+    assert response.status_code == 200
+    payload = response.json()
+
+    # twin entry 101 has 3 links, entry 100 has 1 link
+    # We should get the richer graph (4 nodes: twin, twinjaz, dwóh₁, geminus)
+    assert len(payload["nodes"]) == 4
+    assert len(payload["edges"]) >= 3
+
+    # Verify we have all expected nodes
+    lexemes = {n["lexeme"] for n in payload["nodes"]}
+    assert "twin" in lexemes
+    assert "twinjaz" in lexemes
+    assert "dwóh₁" in lexemes
+    assert "geminus" in lexemes
+
+
+def test_search_deduplicates_by_lexeme():
+    """Test that search returns only one entry per word, with most links."""
+    response = client.get("/search?q=twin")
+    assert response.status_code == 200
+    results = response.json()["results"]
+
+    # Should only have one "twin" entry, not two
+    twin_results = [r for r in results if r["word"] == "twin"]
+    assert len(twin_results) == 1
+
+    # And it should be the one with 3 links (not 1)
+    assert twin_results[0]["ancestors"] == 3
 
 
 def test_enriched_definition_used_for_english_words():
