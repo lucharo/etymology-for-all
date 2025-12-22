@@ -278,51 +278,69 @@ def fetch_all_language_families() -> dict[str, dict[str, str]]:
         return {row[0]: {"name": row[1], "family": row[2], "branch": row[3]} for row in rows}
 
 
+def _is_useful_sense(sense: str | None, lexeme: str) -> bool:
+    """Check if a sense provides useful information beyond the lexeme itself."""
+    if not sense:
+        return False
+    sense_lower = sense.lower().strip('"')
+    lexeme_lower = lexeme.lower()
+    # Not useful: NULL, empty, 'None', or equals lexeme
+    return sense_lower not in ("", "none") and sense_lower != lexeme_lower
+
+
 def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
     """Search for English words matching the query (fuzzy prefix search).
 
-    Returns curated words that have etymology data, including tree size.
+    Returns words with etymology data. Shows EtymDB sense when it differs
+    from lexeme, otherwise falls back to Free Dictionary definition.
+    When multiple senses exist for a word, shows all of them.
     """
     if not query or len(query) < 2:
         return []
 
     with _ConnectionManager() as conn:
-        # Search with enriched definitions from Free Dictionary API
-        # Deduplicate by lexeme, keeping the entry with the most etymology links
+        # Get all entries, then decide what sense/definition to show
         rows = conn.execute(
             """
-            WITH word_links AS (
-                SELECT w.word_ix, w.lexeme, w.sense, COUNT(l.target) as ancestors
-                FROM v_english_curated w
-                LEFT JOIN links l ON l.source = w.word_ix
-                WHERE lower(w.lexeme) LIKE lower(?) || '%'
-                GROUP BY w.word_ix, w.lexeme, w.sense
-            ),
-            best_per_lexeme AS (
-                SELECT word_ix, lexeme, sense, ancestors,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY lower(lexeme)
-                           ORDER BY ancestors DESC, word_ix
-                       ) as rn
-                FROM word_links
-            )
-            SELECT b.lexeme, COALESCE(d.definition, b.sense) as definition, b.ancestors
-            FROM best_per_lexeme b
-            LEFT JOIN v_definitions d ON lower(d.lexeme) = lower(b.lexeme)
-            WHERE b.rn = 1
+            SELECT w.word_ix, w.lexeme, w.sense, d.definition
+            FROM v_english_curated w
+            LEFT JOIN v_definitions d ON lower(d.lexeme) = lower(w.lexeme)
+            WHERE lower(w.lexeme) LIKE lower(?) || '%'
             ORDER BY
-                CASE WHEN lower(b.lexeme) = lower(?) THEN 0 ELSE 1 END,
-                length(b.lexeme),
-                b.lexeme
-            LIMIT ?
+                CASE WHEN lower(w.lexeme) = lower(?) THEN 0 ELSE 1 END,
+                length(w.lexeme),
+                w.lexeme,
+                w.word_ix
             """,
-            [query, query, limit],
+            [query, query],
         ).fetchall()
 
-        return [
-            {
-                "word": row[0],
-                "sense": row[1].strip('"') if row[1] and row[1].lower() != row[0].lower() else None,
-            }
-            for row in rows
-        ]
+        # Build results: show all entries with useful different senses,
+        # or deduplicate if senses are all the same/unhelpful
+        results = []
+        seen_lexemes: dict[str, list] = {}  # lexeme -> list of (sense, definition)
+
+        for _word_ix, lexeme, sense, definition in rows:
+            if lexeme not in seen_lexemes:
+                seen_lexemes[lexeme] = []
+            seen_lexemes[lexeme].append((sense, definition))
+
+        for lexeme, entries in seen_lexemes.items():
+            # Check if any entry has a useful different sense
+            useful_senses = [(s, d) for s, d in entries if _is_useful_sense(s, lexeme)]
+
+            if useful_senses:
+                # Show all entries with useful senses
+                for sense, _definition in useful_senses:
+                    display = sense.strip('"') if sense else None
+                    results.append({"word": lexeme, "sense": display})
+            else:
+                # No useful senses - show one entry with Free Dictionary definition
+                definition = entries[0][1]  # First entry's definition
+                display = definition.strip('"') if definition else None
+                results.append({"word": lexeme, "sense": display})
+
+            if len(results) >= limit:
+                break
+
+        return results[:limit]

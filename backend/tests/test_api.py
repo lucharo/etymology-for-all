@@ -30,9 +30,9 @@ def _prepare_test_database() -> None:
                 (2, "proto-germanic", "mōdēr", "mother"),
                 (3, "proto-indo-european", "méh₂tēr", "mother"),
                 (4, "en", "loneword", "a word with no etymology links"),
-                # Duplicate entries for "twin" - tests that we pick the one with most links
-                (100, "en", "twin", "twin sense A"),  # This has 1 link
-                (101, "en", "twin", "twin sense B"),  # This has 3 links (should be picked)
+                # Multiple entries for "twin" with different senses - both shown in search
+                (100, "en", "twin", "twin sense A"),  # 1 link
+                (101, "en", "twin", "twin sense B"),  # 3 links (graph uses richest)
                 (102, "proto-germanic", "twinjaz", "twin"),
                 (103, "proto-indo-european", "dwóh₁", "two"),
                 (104, "la", "geminus", "twin"),
@@ -163,15 +163,20 @@ def test_graph_picks_entry_with_most_links():
     assert "geminus" in lexemes
 
 
-def test_search_deduplicates_by_lexeme():
-    """Test that search returns only one entry per word."""
+def test_search_shows_all_valid_senses():
+    """Test that search returns all entries with valid senses."""
     response = client.get("/search?q=twin")
     assert response.status_code == 200
     results = response.json()["results"]
 
-    # Should only have one "twin" entry, not two
+    # Should show both "twin" entries since they have different senses
     twin_results = [r for r in results if r["word"] == "twin"]
-    assert len(twin_results) == 1
+    assert len(twin_results) == 2
+
+    # Each should have its sense
+    senses = {r["sense"] for r in twin_results}
+    assert "twin sense A" in senses
+    assert "twin sense B" in senses
 
 
 def test_enriched_definition_used_for_english_words():
