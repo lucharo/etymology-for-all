@@ -296,23 +296,6 @@ button:active {
     color: #dc2626;
 }
 
-#request-word-link {
-    display: inline-block;
-    margin-top: var(--space-sm);
-    padding: var(--space-xs) var(--space-sm);
-    font-size: 0.875rem;
-    color: var(--accent);
-    text-decoration: none;
-    border: 1px solid var(--accent);
-    border-radius: 6px;
-    transition: background 0.2s, color 0.2s;
-}
-
-#request-word-link:hover {
-    background: var(--accent);
-    color: white;
-}
-
 .hidden {
     display: none !important;
 }
@@ -554,11 +537,16 @@ button:active {
     line-height: 1;
 }
 
-/* About button */
-.about-btn {
+/* Header buttons */
+.header-buttons {
     position: absolute;
     top: 0;
     right: 0;
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.header-btn {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
@@ -569,9 +557,10 @@ button:active {
     border-radius: 6px;
     color: var(--text-muted);
     cursor: pointer;
+    text-decoration: none;
 }
 
-.about-btn:hover {
+.header-btn:hover {
     background: var(--bg);
     color: var(--text);
 }
@@ -740,12 +729,12 @@ footer a:hover {
         font-size: 0.875rem;
     }
 
-    .about-btn {
+    .header-btn {
         padding: var(--space-xs);
         font-size: 0.75rem;
     }
 
-    .about-btn svg {
+    .header-btn svg {
         width: 14px;
         height: 14px;
     }

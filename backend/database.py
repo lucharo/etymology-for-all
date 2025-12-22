@@ -283,34 +283,34 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
 
     with _ConnectionManager() as conn:
         # Search with ancestor count (number of direct etymology links)
-        # Uses simple join for fast autocomplete performance
+        # Deduplicate by lexeme, keeping the entry with the most etymology links
         rows = conn.execute(
             """
-            WITH matches AS (
-                SELECT DISTINCT word_ix, lexeme, sense
-                FROM v_english_curated
-                WHERE lower(lexeme) LIKE lower(?) || '%'
-                ORDER BY
-                    CASE WHEN lower(lexeme) = lower(?) THEN 0 ELSE 1 END,
-                    length(lexeme),
-                    lexeme
-                LIMIT ?
+            WITH word_links AS (
+                SELECT w.word_ix, w.lexeme, w.sense, COUNT(l.target) as ancestors
+                FROM v_english_curated w
+                LEFT JOIN links l ON l.source = w.word_ix
+                WHERE lower(w.lexeme) LIKE lower(?) || '%'
+                GROUP BY w.word_ix, w.lexeme, w.sense
             ),
-            link_counts AS (
-                SELECT m.word_ix, COUNT(l.target) as ancestors
-                FROM matches m
-                LEFT JOIN links l ON l.source = m.word_ix
-                GROUP BY m.word_ix
+            best_per_lexeme AS (
+                SELECT lexeme, sense, ancestors,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY lower(lexeme)
+                           ORDER BY ancestors DESC, word_ix
+                       ) as rn
+                FROM word_links
             )
-            SELECT m.lexeme, m.sense, COALESCE(lc.ancestors, 0) as ancestors
-            FROM matches m
-            LEFT JOIN link_counts lc ON m.word_ix = lc.word_ix
+            SELECT lexeme, sense, ancestors
+            FROM best_per_lexeme
+            WHERE rn = 1
             ORDER BY
-                CASE WHEN lower(m.lexeme) = lower(?) THEN 0 ELSE 1 END,
-                length(m.lexeme),
-                m.lexeme
+                CASE WHEN lower(lexeme) = lower(?) THEN 0 ELSE 1 END,
+                length(lexeme),
+                lexeme
+            LIMIT ?
             """,
-            [query, query, limit, query],
+            [query, query, limit],
         ).fetchall()
 
         return [
