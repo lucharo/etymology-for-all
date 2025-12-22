@@ -14,7 +14,7 @@ Human-readable history of the Etymology Graph Explorer.
 ### Custom Domain (Cloudflare Worker)
 - **Cloudflare Worker** proxy in `cloudflare-worker/` for custom domain support
 - `etymology.luischav.es` → proxies to `lucharo-etymology.hf.space`
-- Full CLI deployment via `wrangler deploy`
+- Deploy via `make cf-deploy`
 
 ### Simplified Architecture
 - Removed CORS middleware (not needed with same-origin serving)
@@ -242,10 +242,3 @@ Merged the improved backend implementation:
 [EtymDB 2.1](https://github.com/clefourrier/EtymDB-2.0) - open etymological database derived from Wiktionary.
 
 > Fourrier & Sagot (2020), "Methodological Aspects of Developing and Managing an Etymological Lexical Resource"
-
----
-
-## Backlog
-
-Open issues for future iterations:
-- **#7** - Compound word splitting (inter+nasal)

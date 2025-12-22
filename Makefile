@@ -1,4 +1,4 @@
-.PHONY: hf-init hf-deploy
+.PHONY: hf-init hf-deploy cf-deploy
 
 HF_SPACE := lucharo/etymology
 HF_REPO := /tmp/hf-etymology
@@ -25,3 +25,7 @@ hf-deploy:
 	cd $(HF_REPO) && git add -A && git diff --cached --quiet || git commit -m "Deploy from local" && git push
 	uv run hf upload $(HF_SPACE) backend/data/etymdb.duckdb backend/data/etymdb.duckdb --repo-type space
 	@echo "Done! View at: https://huggingface.co/spaces/$(HF_SPACE)"
+
+# Deploy Cloudflare Worker (custom domain proxy)
+cf-deploy:
+	cd cloudflare-worker && npx wrangler deploy
