@@ -184,9 +184,13 @@
                     </p>
                     <h3>Links vs Graph Size</h3>
                     <p>
-                        The <strong>"N links"</strong> in search results counts direct connections from that word.
-                        The graph shows many more nodes because it follows links recursively (up to 5 levels),
-                        including both ancestors and cognates.
+                        <strong>"N links"</strong> counts direct edges from the searched word — its immediate
+                        connections (ancestors + cognates). The graph is larger because it traverses those
+                        links recursively up to 5 levels deep.
+                    </p>
+                    <p class="example">
+                        Example: "friend" has 12 direct links (1 ancestor + 11 cognates). Following each
+                        of those 12 connections recursively for 5 levels yields 28 total nodes.
                     </p>
                     <h3>Language Family</h3>
                     <p>
