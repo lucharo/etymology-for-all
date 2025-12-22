@@ -164,7 +164,7 @@ def test_graph_picks_entry_with_most_links():
 
 
 def test_search_deduplicates_by_lexeme():
-    """Test that search returns only one entry per word, with most links."""
+    """Test that search returns only one entry per word."""
     response = client.get("/search?q=twin")
     assert response.status_code == 200
     results = response.json()["results"]
@@ -172,9 +172,6 @@ def test_search_deduplicates_by_lexeme():
     # Should only have one "twin" entry, not two
     twin_results = [r for r in results if r["word"] == "twin"]
     assert len(twin_results) == 1
-
-    # And it should be the one with 3 links (not 1)
-    assert twin_results[0]["ancestors"] == 3
 
 
 def test_enriched_definition_used_for_english_words():

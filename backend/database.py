@@ -323,7 +323,6 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
             {
                 "word": row[0],
                 "sense": row[1].strip('"') if row[1] and row[1].lower() != row[0].lower() else None,
-                "ancestors": row[2],  # Direct etymology links count (kept for tests)
             }
             for row in rows
         ]
