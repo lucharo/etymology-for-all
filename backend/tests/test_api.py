@@ -36,6 +36,10 @@ def _prepare_test_database() -> None:
                 (102, "proto-germanic", "twinjaz", "twin"),
                 (103, "proto-indo-european", "dwóh₁", "two"),
                 (104, "la", "geminus", "twin"),
+                # Meta-lexeme: sense="None" is a hub for cognates
+                (200, "en", "friend", "None"),  # Meta-lexeme (hub node)
+                (201, "de", "Freund", "friend"),  # German cognate
+                (202, "proto-germanic", "frijōndz", "friend"),  # Proto-Germanic ancestor
             ],
         )
         conn.executemany(
@@ -51,6 +55,10 @@ def _prepare_test_database() -> None:
                 ("cog", 101, 104),
                 # Continue the chain
                 ("inh", 102, 103),
+                # Meta-lexeme: cognates point TO it (incoming links)
+                ("cog", 201, 200),  # German "Freund" -> English "friend" (meta-lexeme)
+                # Meta-lexeme also has outgoing etymology
+                ("inh", 200, 202),  # friend inherited from Proto-Germanic
             ],
         )
         conn.execute("CREATE INDEX idx_words_word_ix ON words(word_ix)")
@@ -123,9 +131,9 @@ def test_graph_endpoint_word_without_etymology():
 def test_random_endpoint_returns_word():
     response = client.get("/random")
     assert response.status_code == 200
-    # "mother" and "twin" are in v_english_curated (has etymology, is clean)
+    # "mother", "twin", and "friend" are in v_english_curated (has etymology, is clean)
     # "loneword" has no etymology links so it's excluded
-    assert response.json()["word"] in ["mother", "twin"]
+    assert response.json()["word"] in ["mother", "twin", "friend"]
 
 
 def test_graph_picks_entry_with_most_links():
@@ -178,3 +186,21 @@ def test_enriched_definition_used_for_english_words():
     # Should use enriched definition instead of EtymDB sense
     assert "sense" in mother_node
     assert mother_node["sense"] == "A female parent"
+
+
+def test_metalexeme_displayed_in_search():
+    """Test that sense='None' entries are shown as 'MetaLexeme' in search results.
+
+    Meta-lexemes are canonical hub forms that cognates/borrowings point to.
+    They should NOT be filtered out, but displayed with 'MetaLexeme' label.
+    """
+    response = client.get("/search?q=friend")
+    assert response.status_code == 200
+    results = response.json()["results"]
+
+    # Should find the "friend" entry
+    friend_results = [r for r in results if r["word"] == "friend"]
+    assert len(friend_results) == 1
+
+    # sense="None" should be displayed as "MetaLexeme"
+    assert friend_results[0]["sense"] == "MetaLexeme"

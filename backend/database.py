@@ -278,13 +278,31 @@ def fetch_all_language_families() -> dict[str, dict[str, str]]:
 
 
 def _is_useful_sense(sense: str | None, lexeme: str) -> bool:
-    """Check if a sense provides useful information beyond the lexeme itself."""
+    """Check if a sense provides useful information beyond the lexeme itself.
+
+    Note: sense="None" entries are meta-lexemes (hub nodes for cognate networks).
+    These are kept as useful - they represent canonical forms that other words
+    point to via cognate/borrowing links.
+    """
     if not sense:
         return False
     sense_lower = sense.lower().strip('"')
     lexeme_lower = lexeme.lower()
-    # Not useful: NULL, empty, 'None', or equals lexeme
-    return sense_lower not in ("", "none") and sense_lower != lexeme_lower
+    # Not useful: NULL, empty, or equals lexeme
+    # Note: "none" IS useful - it marks meta-lexemes (canonical hub forms)
+    return sense_lower != "" and sense_lower != lexeme_lower
+
+
+def _format_sense_for_display(sense: str) -> str:
+    """Format a sense for display in the UI.
+
+    Renames 'None' to 'MetaLexeme' for clarity - these are canonical hub forms
+    that cognates/borrowings point to.
+    """
+    cleaned = sense.strip('"')
+    if cleaned.lower() == "none":
+        return "MetaLexeme"
+    return cleaned
 
 
 def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
@@ -293,6 +311,12 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
     Returns words with etymology data. Shows EtymDB sense when it differs
     from lexeme, otherwise falls back to Free Dictionary definition.
     When multiple senses exist for a word, shows all of them.
+
+    KEY ASSUMPTION: When sense equals lexeme (not useful), we use the FIRST
+    definition from Free Dictionary API, assuming it's the primary/main meaning.
+    This may not be accurate for polysemous words with distinct etymologies
+    (e.g., "bank" as financial institution vs. river bank). There is no shared
+    identifier between EtymDB and Free Dictionary to enable precise matching.
     """
     if not query or len(query) < 2:
         return []
@@ -329,7 +353,7 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
             if useful_senses:
                 # Show all entries with useful senses
                 for sense in useful_senses:
-                    display = sense.strip('"') if sense else None
+                    display = _format_sense_for_display(sense) if sense else None
                     results.append({"word": lexeme, "sense": display})
             else:
                 # No useful senses - show one entry with Free Dictionary definition
