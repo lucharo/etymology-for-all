@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=15">
+    <link rel="stylesheet" href="styles.css?v=16">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
@@ -132,6 +132,7 @@
 
                 <div class="modal-tabs">
                     <button class="modal-tab active" data-tab="about">About</button>
+                    <button class="modal-tab" data-tab="glossary">Glossary</button>
                     <button class="modal-tab" data-tab="how">How It Works</button>
                 </div>
 
@@ -162,6 +163,41 @@
                     </p>
                 </div>
 
+                <div id="tab-glossary" class="tab-content">
+                    <h2>Glossary</h2>
+                    <h3>Ancestors</h3>
+                    <p>
+                        Words that a modern word <strong>inherited from</strong> or <strong>derived from</strong>.
+                        These form the direct lineage of a word through time.
+                    </p>
+                    <p class="example">
+                        Example: English "mother" ← Old English "mōdor" ← Proto-Germanic "*mōdēr" ← Proto-Indo-European "*méh₂tēr"
+                    </p>
+                    <h3>Cognates</h3>
+                    <p>
+                        Words in <strong>different languages</strong> that share a common ancestor.
+                        They evolved separately but have the same root.
+                    </p>
+                    <p class="example">
+                        Example: English "friend", German "Freund", Dutch "vriend", Gothic "frijōnds"
+                        — all from Proto-Germanic "*frijōndz"
+                    </p>
+                    <h3>Links vs Graph Size</h3>
+                    <p>
+                        The <strong>"N links"</strong> in search results counts direct connections from that word.
+                        The graph shows many more nodes because it follows links recursively (up to 5 levels),
+                        including both ancestors and cognates.
+                    </p>
+                    <h3>Language Family</h3>
+                    <p>
+                        A group of languages descended from a common ancestral language.
+                    </p>
+                    <p class="example">
+                        Example: English, German, Dutch, and Swedish are all part of the <strong>Germanic</strong> branch
+                        of the <strong>Indo-European</strong> family.
+                    </p>
+                </div>
+
                 <div id="tab-how" class="tab-content">
                     <h2>How It Works</h2>
                     <h3>The Data Pipeline</h3>
@@ -176,17 +212,6 @@
                         <li><strong>Arrows</strong> point from modern words to their ancestors</li>
                         <li><strong>Click any word</strong> to see its language family and definition</li>
                         <li><strong>Language families</strong> show how languages are historically related</li>
-                    </ul>
-                    <h3>Links vs Graph Size</h3>
-                    <p>
-                        The <strong>"N links"</strong> shown in search results counts direct connections from that word.
-                        The actual graph may show many more nodes because it follows those links recursively
-                        (up to 5 levels deep), including:
-                    </p>
-                    <ul>
-                        <li><strong>Ancestors</strong> — words this word inherited from (e.g., Old English → Proto-Germanic)</li>
-                        <li><strong>Cognates</strong> — related words in other languages that share a common ancestor
-                            (e.g., English "friend", German "Freund", Dutch "vriend")</li>
                     </ul>
                     <h3>Limitations</h3>
                     <p>

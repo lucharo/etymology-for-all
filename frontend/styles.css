@@ -678,6 +678,15 @@ button:active {
     font-style: italic;
 }
 
+.tab-content .example {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+}
+
 .tab-content ol,
 .tab-content ul {
     margin-bottom: var(--space-sm);
