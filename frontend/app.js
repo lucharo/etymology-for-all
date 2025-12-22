@@ -80,6 +80,7 @@ const loadingEl = document.getElementById('loading');
 const emptyState = document.getElementById('empty-state');
 const errorState = document.getElementById('error-state');
 const errorMessage = document.getElementById('error-message');
+const requestWordLink = document.getElementById('request-word-link');
 const wordInfo = document.getElementById('word-info');
 const currentWord = document.getElementById('current-word');
 const langBreakdown = document.getElementById('lang-breakdown');
@@ -236,13 +237,29 @@ function showLoading() {
     if (cy) cy.elements().remove();
 }
 
-function showError(message) {
+function showError(message, word = null) {
     loadingEl.classList.add('hidden');
     emptyState.classList.add('hidden');
     errorState.classList.remove('hidden');
     errorMessage.textContent = message;
     wordInfo.classList.add('hidden');
     if (directionIndicator) directionIndicator.classList.add('hidden');
+
+    // Show request link for 404 errors (word not found)
+    if (requestWordLink) {
+        if (word && message.includes('not found')) {
+            const issueTitle = encodeURIComponent(`Add etymology for: ${word}`);
+            const issueBody = encodeURIComponent(
+                `**Word:** ${word}\n\n` +
+                `**Context:** This word was searched but no etymology was found in the database.\n\n` +
+                `Please consider adding etymology data for this word.`
+            );
+            requestWordLink.href = `https://github.com/lucharo/etymology-for-all/issues/new?title=${issueTitle}&body=${issueBody}`;
+            requestWordLink.classList.remove('hidden');
+        } else {
+            requestWordLink.classList.add('hidden');
+        }
+    }
 }
 
 function showGraph() {
@@ -389,7 +406,7 @@ async function handleSearch() {
         const data = await fetchEtymology(word);
         renderGraph(data, word);
     } catch (err) {
-        showError(err.message);
+        showError(err.message, word);
     }
 }
 

@@ -115,6 +115,13 @@ def test_graph_endpoint_missing_word():
     assert response.status_code == 404
 
 
+def test_graph_endpoint_word_without_etymology():
+    """Test that words with no etymology links return 404."""
+    # "river" exists in DB but has no links, so it should return 404
+    response = client.get("/graph/river")
+    assert response.status_code == 404
+
+
 def test_random_endpoint_returns_word():
     response = client.get("/random")
     assert response.status_code == 200

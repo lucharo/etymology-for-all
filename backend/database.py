@@ -236,6 +236,10 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
             for ix, (lexeme, lang, sense) in raw_nodes.items()
         }
 
+        # Return None if word has no etymology (single node, no edges)
+        if not edges:
+            return None
+
         return {"nodes": list(nodes.values()), "edges": edges}
 
 
