@@ -1,3 +1,12 @@
+---
+title: Etymology Graph Explorer
+emoji: 🌳
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+---
+
 # Etymology Graph Explorer
 
 A visual tool for exploring the origins and historical relationships between words. Search for any word and see its etymological journey through time, from modern usage back to ancient roots.
@@ -23,12 +32,10 @@ uv run uvicorn backend.main:app --reload
 docker build -t etymology .
 
 # Run the container
-docker run -p 8000:8000 etymology
+docker run -p 7860:7860 etymology
 
-# Open http://localhost:8000 in your browser
+# Open http://localhost:7860 in your browser
 ```
-
-The first run will download the etymology database (~50MB). This data is cached for subsequent runs.
 
 ## Features
 

@@ -4,6 +4,30 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.7.0 - HF Spaces Deployment (2024-12-21)
+
+### Deployment Infrastructure
+- **Hugging Face Spaces** hosting with Docker SDK
+- **Makefile** with `hf-init` (one-time) and `hf-deploy` targets
+- Git remote workflow: push code via git, upload DuckDB via HF API (handles large files)
+
+### Custom Domain (Cloudflare Worker)
+- **Cloudflare Worker** proxy in `cloudflare-worker/` for custom domain support
+- `etymology.luischav.es` → proxies to `lucharo-etymology.hf.space`
+- Deploy via `make cf-deploy`
+
+### Simplified Architecture
+- Removed CORS middleware (not needed with same-origin serving)
+- Frontend uses relative URLs (FastAPI serves both API + static files)
+- DuckDB baked into Docker image for instant cold starts
+
+### Files Added
+- `Makefile` - HF Spaces deployment automation
+- `cloudflare-worker/worker.js` - Proxy worker (10 lines)
+- `cloudflare-worker/wrangler.toml` - Worker config with custom domain
+
+---
+
 ## v0.6.0 - Load Testing & Rate Limiting (2024-12-20)
 
 ### Load Testing Infrastructure
@@ -218,14 +242,3 @@ Merged the improved backend implementation:
 [EtymDB 2.1](https://github.com/clefourrier/EtymDB-2.0) - open etymological database derived from Wiktionary.
 
 > Fourrier & Sagot (2020), "Methodological Aspects of Developing and Managing an Etymological Lexical Resource"
-
----
-
-## Backlog
-
-Open issues for future iterations:
-- **#5** - Stats/about page showing database coverage
-- **#6** - Consider filtering phrases from raw data
-- **#7** - Compound word splitting (inter+nasal)
-- **#8** - Language family metadata in graph UI
-- **#3** - Hugging Face Space deployment

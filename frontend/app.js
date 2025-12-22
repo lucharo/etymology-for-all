@@ -260,7 +260,7 @@ async function fetchEtymology(word) {
 
 // Fetch random word
 async function fetchRandomWord() {
-    const response = await fetch('/random');
+    const response = await fetch(`/random`);
     await handleApiResponse(response, 'random word');
     const data = await response.json();
     return data.word;
