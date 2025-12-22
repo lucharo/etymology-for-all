@@ -97,8 +97,18 @@ def ensure_definitions_table(conn: duckdb.DuckDBPyConnection) -> None:
             status VARCHAR
         )
     """)
+
+
+def materialize_definitions(conn: duckdb.DuckDBPyConnection) -> None:
+    """Materialize parsed definitions into a proper table.
+
+    This avoids JSON parsing on every query. The raw JSON is kept in
+    definitions_raw for debugging/reprocessing if needed.
+    """
+    print("Materializing definitions table...")
+    conn.execute("DROP TABLE IF EXISTS definitions")
     conn.execute("""
-        CREATE OR REPLACE VIEW v_definitions AS
+        CREATE TABLE definitions AS
         SELECT
             lexeme,
             CAST(api_response->'$[0]'->'meanings'->'$[0]'->'definitions'->'$[0]'->'definition' AS VARCHAR) as definition,
@@ -107,6 +117,16 @@ def ensure_definitions_table(conn: duckdb.DuckDBPyConnection) -> None:
         FROM definitions_raw
         WHERE status = 'success'
     """)
+    conn.execute("CREATE INDEX idx_definitions_lexeme ON definitions(lexeme)")
+
+    # Create view that points to the table for backwards compatibility
+    conn.execute("""
+        CREATE OR REPLACE VIEW v_definitions AS
+        SELECT * FROM definitions
+    """)
+
+    count = conn.execute("SELECT COUNT(*) FROM definitions").fetchone()[0]
+    print(f"  Materialized {count:,} definitions")
 
 
 def store_result(
@@ -177,6 +197,10 @@ async def enrich_definitions(max_words: int | None = None) -> None:
         f"  Success: {stats['success']:,}, Not found: {stats['not_found']:,}, Errors: {stats['error']:,}"
     )
 
+    # Materialize the definitions table for fast queries
+    with duckdb.connect(db_path.as_posix()) as conn:
+        materialize_definitions(conn)
+
 
 def get_stats() -> None:
     """Show current enrichment statistics."""
@@ -209,14 +233,28 @@ def get_stats() -> None:
             print(f"  {status}: {count:,}")
 
 
+def run_materialize() -> None:
+    """Just materialize definitions without fetching new ones."""
+    db_path = database_path()
+    with duckdb.connect(db_path.as_posix()) as conn:
+        materialize_definitions(conn)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Enrich etymology database with definitions")
     parser.add_argument("--stats", action="store_true", help="Show enrichment statistics")
     parser.add_argument("--test", type=int, metavar="N", help="Test mode: only process N words")
+    parser.add_argument(
+        "--materialize",
+        action="store_true",
+        help="Just materialize definitions table (no API calls)",
+    )
     args = parser.parse_args()
 
     if args.stats:
         get_stats()
+    elif args.materialize:
+        run_materialize()
     else:
         asyncio.run(enrich_definitions(max_words=args.test))
 
