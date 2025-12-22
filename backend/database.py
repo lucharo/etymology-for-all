@@ -299,12 +299,11 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
         return []
 
     with _ConnectionManager() as conn:
-        # Get all entries, then decide what sense/definition to show
+        # Step 1: Fast query without JOIN (v_definitions is slow due to JSON parsing)
         rows = conn.execute(
             """
-            SELECT w.word_ix, w.lexeme, w.sense, d.definition
+            SELECT w.lexeme, w.sense
             FROM v_english_curated w
-            LEFT JOIN v_definitions d ON lower(d.lexeme) = lower(w.lexeme)
             WHERE lower(w.lexeme) LIKE lower(?) || '%'
             ORDER BY
                 CASE WHEN lower(w.lexeme) = lower(?) THEN 0 ELSE 1 END,
@@ -315,28 +314,39 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
             [query, query],
         ).fetchall()
 
-        # Build results: show all entries with useful different senses,
-        # or deduplicate if senses are all the same/unhelpful
-        results = []
-        seen_lexemes: dict[str, list] = {}  # lexeme -> list of (sense, definition)
-
-        for _word_ix, lexeme, sense, definition in rows:
+        # Step 2: Group by lexeme and identify which need definitions
+        seen_lexemes: dict[str, list[str | None]] = {}  # lexeme -> list of senses
+        for lexeme, sense in rows:
             if lexeme not in seen_lexemes:
                 seen_lexemes[lexeme] = []
-            seen_lexemes[lexeme].append((sense, definition))
+            seen_lexemes[lexeme].append(sense)
 
-        for lexeme, entries in seen_lexemes.items():
-            # Check if any entry has a useful different sense
-            useful_senses = [(s, d) for s, d in entries if _is_useful_sense(s, lexeme)]
+        # Step 3: Find lexemes that need Free Dictionary definitions
+        # (those where all senses are unhelpful)
+        lexemes_need_def = [
+            lex
+            for lex, senses in seen_lexemes.items()
+            if not any(_is_useful_sense(s, lex) for s in senses)
+        ]
+
+        # Step 4: Batch fetch definitions only for lexemes that need them
+        definitions = (
+            _get_definitions_for_lexemes(conn, lexemes_need_def) if lexemes_need_def else {}
+        )
+
+        # Step 5: Build results
+        results = []
+        for lexeme, senses in seen_lexemes.items():
+            useful_senses = [s for s in senses if _is_useful_sense(s, lexeme)]
 
             if useful_senses:
                 # Show all entries with useful senses
-                for sense, _definition in useful_senses:
+                for sense in useful_senses:
                     display = sense.strip('"') if sense else None
                     results.append({"word": lexeme, "sense": display})
             else:
                 # No useful senses - show one entry with Free Dictionary definition
-                definition = entries[0][1]  # First entry's definition
+                definition = definitions.get(lexeme.lower())
                 display = definition.strip('"') if definition else None
                 results.append({"word": lexeme, "sense": display})
 
