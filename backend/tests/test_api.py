@@ -29,7 +29,7 @@ def _prepare_test_database() -> None:
                 (1, "en", "mother", "mother"),
                 (2, "proto-germanic", "mōdēr", "mother"),
                 (3, "proto-indo-european", "méh₂tēr", "mother"),
-                (4, "en", "river", "river"),
+                (4, "en", "loneword", "a word with no etymology links"),
             ],
         )
         conn.executemany(
@@ -117,8 +117,8 @@ def test_graph_endpoint_missing_word():
 
 def test_graph_endpoint_word_without_etymology():
     """Test that words with no etymology links return 404."""
-    # "river" exists in DB but has no links, so it should return 404
-    response = client.get("/graph/river")
+    # "loneword" exists in DB but has no links, so it should return 404
+    response = client.get("/graph/loneword")
     assert response.status_code == 404
 
 
