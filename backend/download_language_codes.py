@@ -46,15 +46,21 @@ def main() -> None:
     for row in csv.DictReader(StringIO(content)):
         codes[row["alpha2"]] = row["English"]
 
-    # 3. Wiktionary etymology languages (dialects, variants)
+    # 3. Wiktionary main languages (code to name JSON)
+    print("Fetching Wiktionary languages JSON...")
+    content = fetch(
+        "https://en.wiktionary.org/w/index.php?title=Module:languages/code_to_canonical_name.json&action=raw"
+    )
+    codes.update(json.loads(content))
+
+    # 4. Wiktionary etymology languages (dialects, variants) - JSON
     print("Fetching Wiktionary etymology codes...")
     content = fetch(
-        "https://en.wiktionary.org/w/index.php?title=Module:etymology_languages/data&action=raw"
+        "https://en.wiktionary.org/w/index.php?title=Module:etymology_languages/code_to_canonical_name.json&action=raw"
     )
-    for m in re.finditer(r'm\["([^"]+)"\]\s*=\s*\{\s*\n\s*"([^"]+)"', content):
-        codes[m.group(1)] = m.group(2)
+    codes.update(json.loads(content))
 
-    # 4. Wiktionary families -> proto-languages
+    # 5. Wiktionary families -> proto-languages
     print("Fetching Wiktionary families...")
     content = fetch("https://en.wiktionary.org/w/index.php?title=Module:families/data&action=raw")
     for m in re.finditer(r'm\["([^"]+)"\]\s*=\s*\{\s*\n\s*"([^"]+)"', content):

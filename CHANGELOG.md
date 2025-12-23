@@ -7,8 +7,8 @@ Human-readable history of the Etymology Graph Explorer.
 ## v0.9.0 - Language Name Mappings (2024-12-23)
 
 ### Language Display
-- **10,710 language code mappings** from combined sources
-- **91.9% coverage** of EtymDB's 2,536 unique language codes (2,331 mapped)
+- **11,195 language code mappings** from combined sources
+- **96.6% coverage** of EtymDB's 2,536 unique language codes (2,449 mapped)
 - Proto-languages like `gem-pro` → "Proto-Germanic", `ine-pro` → "Proto-Indo-European"
 - Historical languages like `ofs` → "Old Frisian", `xcl` → "Classical Armenian"
 
@@ -16,6 +16,7 @@ Human-readable history of the Etymology Graph Explorer.
 Combined mappings from:
 - ISO 639-3 official registry (SIL International)
 - ISO 639-1 two-letter codes
+- Wiktionary languages module (code_to_canonical_name.json)
 - Wiktionary etymology languages module
 - Wiktionary language families module (includes proto-languages)
 
