@@ -33,9 +33,11 @@ def health_check():
 
 @app.get("/graph/{word}")
 @limiter.limit("20/minute")
-def get_graph(request: Request, word: str):
+def get_graph(request: Request, word: str, depth: int = 5):
     """Fetch etymology graph for a word."""
-    graph = fetch_etymology(word)
+    # Clamp depth to reasonable bounds
+    depth = max(1, min(depth, 10))
+    graph = fetch_etymology(word, depth=depth)
     if not graph:
         raise HTTPException(status_code=404, detail="Word not found")
     return graph
