@@ -95,6 +95,8 @@ const depthMinus = document.getElementById('depth-minus');
 const depthPlus = document.getElementById('depth-plus');
 const depthValue = document.getElementById('depth-value');
 const graphOptions = document.getElementById('graph-options');
+const expandBtn = document.getElementById('expand-btn');
+const graphBackdrop = document.getElementById('graph-backdrop');
 const statsToggle = document.getElementById('stats-toggle');
 const statsPanel = document.getElementById('stats-panel');
 const statNodes = document.getElementById('stat-nodes');
@@ -253,6 +255,7 @@ function showLoading() {
     if (statsPanel) statsPanel.classList.add('hidden');
     if (statsToggle) statsToggle.classList.remove('active');
     if (directionIndicator) directionIndicator.classList.add('hidden');
+    if (expandBtn) expandBtn.classList.add('hidden');
     if (cy) cy.elements().remove();
 }
 
@@ -263,12 +266,15 @@ function showError(message) {
     errorMessage.textContent = message;
     wordInfo.classList.add('hidden');
     if (directionIndicator) directionIndicator.classList.add('hidden');
+    if (expandBtn) expandBtn.classList.add('hidden');
+    minimizeGraph(); // Ensure graph is not expanded when showing error
 }
 
 function showGraph() {
     loadingEl.classList.add('hidden');
     emptyState.classList.add('hidden');
     errorState.classList.add('hidden');
+    if (expandBtn) expandBtn.classList.remove('hidden');
 }
 
 // Fetch etymology data (always fetch max depth for client-side filtering)
@@ -715,6 +721,49 @@ if (statsToggle && statsPanel) {
     });
 }
 
+// Expand/minimize graph functionality
+let isExpanded = false;
+
+function toggleExpandGraph() {
+    isExpanded = !isExpanded;
+    graphContainer.classList.toggle('expanded', isExpanded);
+    if (graphBackdrop) graphBackdrop.classList.toggle('visible', isExpanded);
+
+    // Re-fit graph after transition completes
+    setTimeout(() => {
+        if (cy) {
+            cy.resize();
+            cy.fit(undefined, 40);
+        }
+    }, 350); // Match CSS transition duration
+}
+
+function minimizeGraph() {
+    if (isExpanded) {
+        isExpanded = false;
+        graphContainer.classList.remove('expanded');
+        if (graphBackdrop) graphBackdrop.classList.remove('visible');
+
+        // Re-fit graph after transition completes
+        setTimeout(() => {
+            if (cy) {
+                cy.resize();
+                cy.fit(undefined, 40);
+            }
+        }, 350);
+    }
+}
+
+// Expand button click handler
+if (expandBtn) {
+    expandBtn.addEventListener('click', toggleExpandGraph);
+}
+
+// Backdrop click to minimize
+if (graphBackdrop) {
+    graphBackdrop.addEventListener('click', minimizeGraph);
+}
+
 // Input event for autocomplete
 wordInput.addEventListener('input', (e) => {
     clearTimeout(searchTimeout);
@@ -800,10 +849,17 @@ document.addEventListener('DOMContentLoaded', () => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
-    // Close modal on Escape
+    // Escape key handler (modal and graph expand)
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && aboutModal && !aboutModal.classList.contains('hidden')) {
-            closeAboutModal();
+        if (e.key === 'Escape') {
+            // First priority: close modal if open
+            if (aboutModal && !aboutModal.classList.contains('hidden')) {
+                closeAboutModal();
+            }
+            // Second priority: minimize expanded graph
+            else if (isExpanded) {
+                minimizeGraph();
+            }
         }
     });
 });
