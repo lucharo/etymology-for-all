@@ -2,34 +2,17 @@
  * Utility functions for Etymology Explorer
  */
 
-// Human-readable language names (fallback when not provided by API)
+// Fallback language names (API provides names from 2400+ code database)
+// This is only used when API doesn't return lang_name
 export const LANG_NAMES = {
     en: 'English',
-    fr: 'French',
-    de: 'German',
-    es: 'Spanish',
-    it: 'Italian',
-    pt: 'Portuguese',
-    nl: 'Dutch',
     la: 'Latin',
-    lat: 'Latin',
     grc: 'Ancient Greek',
-    'ancient-greek': 'Ancient Greek',
-    el: 'Greek',
-    'proto-germanic': 'Proto-Germanic',
-    'proto-indo-european': 'Proto-Indo-European',
-    'old-english': 'Old English',
-    'middle-english': 'Middle English',
-    'old-french': 'Old French',
-    'middle-french': 'Middle French',
-    'old-high-german': 'Old High German',
-    'old-norse': 'Old Norse',
-    ar: 'Arabic',
-    he: 'Hebrew',
     ang: 'Old English',
     enm: 'Middle English',
-    gem: 'Proto-Germanic',
-    ine: 'Proto-Indo-European',
+    fro: 'Old French',
+    'gem-pro': 'Proto-Germanic',
+    'ine-pro': 'Proto-Indo-European',
 };
 
 export function getLangName(lang) {
