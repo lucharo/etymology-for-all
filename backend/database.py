@@ -85,13 +85,12 @@ def _get_definitions_for_lexemes(conn, lexemes: list[str]) -> dict[str, str]:
     if not lexemes:
         return {}
     try:
-        # Query only the specific lexemes we need
         placeholders = ",".join(["?" for _ in lexemes])
         rows = conn.execute(
             f"""
-            SELECT lower(lexeme), definition
-            FROM v_definitions
-            WHERE lower(lexeme) IN ({placeholders}) AND definition IS NOT NULL
+            SELECT lexeme, definition
+            FROM definitions
+            WHERE lexeme IN ({placeholders}) AND definition IS NOT NULL
             """,
             [lex.lower() for lex in lexemes],
         ).fetchall()
@@ -160,13 +159,18 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
         # Load language families (small table, 53 rows)
         lang_families = _get_language_families(conn)
 
-        # Find starting word (prefer English)
+        # Find starting word (prefer English, then most etymology links)
         start = conn.execute(
             """
-            SELECT word_ix, lang, lexeme, sense
-            FROM words
-            WHERE lower(lexeme) = lower(?)
-            ORDER BY CASE WHEN lang = 'en' THEN 0 ELSE 1 END, word_ix
+            SELECT w.word_ix, w.lang, w.lexeme, w.sense
+            FROM words w
+            LEFT JOIN links l ON l.source = w.word_ix
+            WHERE lower(w.lexeme) = lower(?)
+            GROUP BY w.word_ix, w.lang, w.lexeme, w.sense
+            ORDER BY
+                CASE WHEN w.lang = 'en' THEN 0 ELSE 1 END,
+                COUNT(l.target) DESC,
+                w.word_ix
             LIMIT 1
             """,
             [word],
@@ -236,6 +240,10 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
             for ix, (lexeme, lang, sense) in raw_nodes.items()
         }
 
+        # Return None if word has no etymology (single node, no edges)
+        if not edges:
+            return None
+
         return {"nodes": list(nodes.values()), "edges": edges}
 
 
@@ -269,51 +277,82 @@ def fetch_all_language_families() -> dict[str, dict[str, str]]:
         return {row[0]: {"name": row[1], "family": row[2], "branch": row[3]} for row in rows}
 
 
+def _is_useful_sense(sense: str | None, lexeme: str) -> bool:
+    """Check if a sense provides useful information beyond the lexeme itself.
+
+    NULL senses are filtered out - they're structural entries without
+    meaningful definitions. We prefer entries where sense differs from lexeme.
+    """
+    if sense is None:
+        return False
+    sense_lower = sense.lower().strip('"')
+    lexeme_lower = lexeme.lower()
+    # Not useful: NULL, empty string, or equals lexeme
+    return sense_lower != "" and sense_lower != lexeme_lower
+
+
+def _format_sense_for_display(sense: str) -> str:
+    """Format a sense for display in the UI."""
+    return sense.strip('"')
+
+
 def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
     """Search for English words matching the query (fuzzy prefix search).
 
-    Returns curated words that have etymology data, including tree size.
+    Returns words with etymology data. Shows EtymDB sense when it differs
+    from lexeme, otherwise falls back to Free Dictionary definition.
+    When multiple senses exist for a word, shows all of them.
+
+    KEY ASSUMPTION: When sense equals lexeme (not useful), we use the FIRST
+    definition from Free Dictionary API, assuming it's the primary/main meaning.
+    This may not be accurate for polysemous words with distinct etymologies
+    (e.g., "bank" as financial institution vs. river bank). There is no shared
+    identifier between EtymDB and Free Dictionary to enable precise matching.
     """
     if not query or len(query) < 2:
         return []
 
     with _ConnectionManager() as conn:
-        # Search with ancestor count (number of direct etymology links)
-        # Uses simple join for fast autocomplete performance
+        # Single query with JOIN (definitions.lexeme is lowercase for fast equality)
         rows = conn.execute(
             """
-            WITH matches AS (
-                SELECT DISTINCT word_ix, lexeme, sense
-                FROM v_english_curated
-                WHERE lower(lexeme) LIKE lower(?) || '%'
-                ORDER BY
-                    CASE WHEN lower(lexeme) = lower(?) THEN 0 ELSE 1 END,
-                    length(lexeme),
-                    lexeme
-                LIMIT ?
-            ),
-            link_counts AS (
-                SELECT m.word_ix, COUNT(l.target) as ancestors
-                FROM matches m
-                LEFT JOIN links l ON l.source = m.word_ix
-                GROUP BY m.word_ix
-            )
-            SELECT m.lexeme, m.sense, COALESCE(lc.ancestors, 0) as ancestors
-            FROM matches m
-            LEFT JOIN link_counts lc ON m.word_ix = lc.word_ix
+            SELECT w.lexeme, w.sense, d.definition
+            FROM v_english_curated w
+            LEFT JOIN definitions d ON d.lexeme = lower(w.lexeme)
+            WHERE lower(w.lexeme) LIKE lower(?) || '%'
             ORDER BY
-                CASE WHEN lower(m.lexeme) = lower(?) THEN 0 ELSE 1 END,
-                length(m.lexeme),
-                m.lexeme
+                CASE WHEN lower(w.lexeme) = lower(?) THEN 0 ELSE 1 END,
+                length(w.lexeme),
+                w.lexeme,
+                w.word_ix
             """,
-            [query, query, limit, query],
+            [query, query],
         ).fetchall()
 
-        return [
-            {
-                "word": row[0],
-                "sense": row[1] if row[1] and row[1].lower() != row[0].lower() else None,
-                "ancestors": row[2],  # Direct etymology links count
-            }
-            for row in rows
-        ]
+        # Group by lexeme to handle duplicates
+        seen_lexemes: dict[str, list[tuple]] = {}  # lexeme -> [(sense, definition), ...]
+        for lexeme, sense, definition in rows:
+            if lexeme not in seen_lexemes:
+                seen_lexemes[lexeme] = []
+            seen_lexemes[lexeme].append((sense, definition))
+
+        # Build results
+        results = []
+        for lexeme, entries in seen_lexemes.items():
+            useful_senses = [s for s, _ in entries if _is_useful_sense(s, lexeme)]
+
+            if useful_senses:
+                # Show all entries with useful senses
+                for sense in useful_senses:
+                    display = _format_sense_for_display(sense)
+                    results.append({"word": lexeme, "sense": display})
+            else:
+                # No useful senses - show one entry with Free Dictionary definition
+                definition = entries[0][1]  # First entry's definition
+                display = definition.strip('"') if definition else None
+                results.append({"word": lexeme, "sense": display})
+
+            if len(results) >= limit:
+                break
+
+        return results[:limit]

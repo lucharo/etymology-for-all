@@ -144,27 +144,9 @@ h1 {
     background: var(--accent-light);
 }
 
-.suggestion-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--space-sm);
-}
-
 .suggestion-word {
     font-weight: 500;
     color: var(--text);
-}
-
-.suggestion-ancestors {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    white-space: nowrap;
-}
-
-.suggestion-ancestors.single {
-    color: #d97706;
-    font-style: italic;
 }
 
 .suggestion-sense {
@@ -537,11 +519,16 @@ button:active {
     line-height: 1;
 }
 
-/* About button */
-.about-btn {
+/* Header buttons */
+.header-buttons {
     position: absolute;
     top: 0;
     right: 0;
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.header-btn {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
@@ -552,9 +539,10 @@ button:active {
     border-radius: 6px;
     color: var(--text-muted);
     cursor: pointer;
+    text-decoration: none;
 }
 
-.about-btn:hover {
+.header-btn:hover {
     background: var(--bg);
     color: var(--text);
 }
@@ -672,6 +660,15 @@ button:active {
     font-style: italic;
 }
 
+.tab-content .example {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+}
+
 .tab-content ol,
 .tab-content ul {
     margin-bottom: var(--space-sm);
@@ -723,12 +720,12 @@ footer a:hover {
         font-size: 0.875rem;
     }
 
-    .about-btn {
+    .header-btn {
         padding: var(--space-xs);
         font-size: 0.75rem;
     }
 
-    .about-btn svg {
+    .header-btn svg {
         width: 14px;
         height: 14px;
     }
