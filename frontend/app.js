@@ -103,7 +103,6 @@ const statNodes = document.getElementById('stat-nodes');
 const statEdges = document.getElementById('stat-edges');
 const statLangs = document.getElementById('stat-langs');
 const statDepth = document.getElementById('stat-depth');
-const statRoot = document.getElementById('stat-root');
 
 let cy = null;
 let fullGraphData = null; // Full graph data (max depth)
@@ -480,8 +479,7 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
     // Update stats after layout completes
     setTimeout(() => {
         const graphDepth = calculateGraphDepth(cy, searchedWord);
-        const roots = findRootAncestors(cy);
-        updateStats(displayData.nodes.length, displayData.edges.length, langCounts.size, graphDepth, roots);
+        updateStats(displayData.nodes.length, displayData.edges.length, langCounts.size, graphDepth);
     }, 50);
 }
 
@@ -523,33 +521,12 @@ function calculateGraphDepth(cy, startWord) {
     return maxDepth;
 }
 
-// Find the oldest ancestor(s) in the graph
-function findRootAncestors(cy) {
-    if (!cy || cy.nodes().length === 0) return [];
-
-    // Root ancestors have no outgoing edges (nothing they derive from)
-    const roots = cy.nodes().filter(n => n.outgoers('edge').length === 0);
-
-    return roots.map(n => ({
-        word: n.data('word'),
-        lang: n.data('langName') || getLangName(n.data('lang'))
-    }));
-}
-
 // Update stats panel
-function updateStats(nodeCount, edgeCount, langCount, depth, roots) {
+function updateStats(nodeCount, edgeCount, langCount, depth) {
     if (statNodes) statNodes.textContent = nodeCount;
     if (statEdges) statEdges.textContent = edgeCount;
     if (statLangs) statLangs.textContent = langCount;
     if (statDepth) statDepth.textContent = depth;
-
-    if (statRoot && roots.length > 0) {
-        const rootText = roots.slice(0, 3).map(r => `${r.word} (${r.lang})`).join(', ');
-        const suffix = roots.length > 3 ? ` +${roots.length - 3} more` : '';
-        statRoot.innerHTML = `<strong>Roots:</strong> ${rootText}${suffix}`;
-    } else if (statRoot) {
-        statRoot.textContent = '';
-    }
 }
 
 // Update info summary with language breakdown

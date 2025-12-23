@@ -421,14 +421,19 @@ button:active {
 /* Word info bar */
 #word-info {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-sm) var(--space-md);
+    flex-direction: column;
     margin-top: var(--space-md);
     padding: var(--space-sm) var(--space-md);
     background: white;
     border: 1px solid var(--border);
     border-radius: 8px;
+}
+
+.word-info-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-md);
 }
 
 #current-word {
@@ -496,13 +501,11 @@ button:active {
     color: var(--accent);
 }
 
-/* Stats panel */
+/* Stats panel (inside word-info) */
 .stats-panel {
     margin-top: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--border);
 }
 
 .stats-grid {
@@ -532,18 +535,6 @@ button:active {
     letter-spacing: 0.05em;
 }
 
-.stat-root {
-    text-align: center;
-    margin-top: var(--space-sm);
-    padding-top: var(--space-sm);
-    border-top: 1px solid var(--border);
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-.stat-root:empty {
-    display: none;
-}
 
 /* Node detail panel */
 #node-detail {
