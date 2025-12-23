@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Data Source - EtymDB
+    url: https://github.com/clefourrier/EtymDB-2.0
+    about: Issues with etymology data should be reported to EtymDB
