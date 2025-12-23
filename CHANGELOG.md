@@ -4,6 +4,26 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.9.0 - Language Name Mappings (2024-12-23)
+
+### Language Display
+- **2444 language codes** now display human-readable names instead of shortcodes
+- Covers 92.3% of all language codes in EtymDB
+- Proto-languages like `gem-pro` → "Proto-Germanic", `ine-pro` → "Proto-Indo-European"
+- Historical languages like `ofs` → "Old Frisian", `xcl` → "Classical Armenian"
+
+### Data Sources
+Combined mappings from:
+- ISO 639-3 official registry (SIL International)
+- ISO 639-1 two-letter codes
+- Wiktionary etymology languages module
+- Wiktionary language families module
+
+### Files Added
+- `backend/data/language_codes.json` - 2444 language code mappings
+
+---
+
 ## v0.8.0 - Graph Controls & ES Modules (2024-12-23)
 
 ### Graph Interaction
