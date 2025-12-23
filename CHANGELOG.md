@@ -4,6 +4,27 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.8.0 - Graph Controls & ES Modules (2024-12-23)
+
+### Graph Interaction
+- **Depth controls** - Adjust graph depth with +/- buttons to explore more or fewer ancestors
+- **Expand/minimize** - Full-screen graph view with backdrop overlay
+- **Stats panel** - Toggle to see node count, edge count, language count, and graph depth
+
+### Code Architecture
+- **ES Modules refactor** - Split monolithic `app.js` (800+ lines) into focused modules:
+  - `utils.js` - Language names, truncation, API error handling
+  - `graph.js` - Cytoscape initialization, rendering, depth filtering with BFS
+  - `search.js` - Search, autocomplete, suggestions
+  - `ui.js` - State management, modals, expand/minimize handlers
+  - `app.js` - Main entry point, DOM references, event wiring
+
+### Frontend Error Handling
+- User-friendly error messages for rate limiting (429), not found (404), server errors (5xx)
+- Retry-After header displayed for rate limit errors
+
+---
+
 ## v0.7.0 - HF Spaces Deployment (2024-12-21)
 
 ### Deployment Infrastructure
