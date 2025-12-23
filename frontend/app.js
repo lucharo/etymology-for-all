@@ -97,12 +97,6 @@ const depthValue = document.getElementById('depth-value');
 const graphOptions = document.getElementById('graph-options');
 const expandBtn = document.getElementById('expand-btn');
 const graphBackdrop = document.getElementById('graph-backdrop');
-const statsToggle = document.getElementById('stats-toggle');
-const statsPanel = document.getElementById('stats-panel');
-const statNodes = document.getElementById('stat-nodes');
-const statEdges = document.getElementById('stat-edges');
-const statLangs = document.getElementById('stat-langs');
-const statDepth = document.getElementById('stat-depth');
 
 let cy = null;
 let fullGraphData = null; // Full graph data (max depth)
@@ -251,8 +245,6 @@ function showLoading() {
     errorState.classList.add('hidden');
     wordInfo.classList.add('hidden');
     if (graphOptions) graphOptions.classList.add('hidden');
-    if (statsPanel) statsPanel.classList.add('hidden');
-    if (statsToggle) statsToggle.classList.remove('active');
     if (directionIndicator) directionIndicator.classList.add('hidden');
     if (expandBtn) expandBtn.classList.add('hidden');
     if (cy) cy.elements().remove();
@@ -475,58 +467,6 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
     updateInfoSummary(seenLangs, langCounts);
     wordInfo.classList.remove('hidden');
     showGraph();
-
-    // Update stats after layout completes
-    setTimeout(() => {
-        const graphDepth = calculateGraphDepth(cy, searchedWord);
-        updateStats(displayData.nodes.length, displayData.edges.length, langCounts.size, graphDepth);
-    }, 50);
-}
-
-// Calculate graph depth using BFS from the searched word
-function calculateGraphDepth(cy, startWord) {
-    if (!cy || cy.nodes().length === 0) return 0;
-
-    // Find the starting node (English node matching the word)
-    const startNode = cy.nodes().filter(n => {
-        const word = n.data('word');
-        const lang = n.data('lang');
-        return word && word.toLowerCase() === startWord.toLowerCase() && lang === 'en';
-    }).first();
-
-    if (!startNode || startNode.length === 0) return 0;
-
-    // BFS to find maximum depth
-    const visited = new Set();
-    const queue = [{ node: startNode, depth: 0 }];
-    let maxDepth = 0;
-
-    while (queue.length > 0) {
-        const { node, depth } = queue.shift();
-        const nodeId = node.id();
-
-        if (visited.has(nodeId)) continue;
-        visited.add(nodeId);
-        maxDepth = Math.max(maxDepth, depth);
-
-        // Get connected nodes via outgoing edges (source -> target means source is newer)
-        const outgoers = node.outgoers('node');
-        outgoers.forEach(neighbor => {
-            if (!visited.has(neighbor.id())) {
-                queue.push({ node: neighbor, depth: depth + 1 });
-            }
-        });
-    }
-
-    return maxDepth;
-}
-
-// Update stats panel
-function updateStats(nodeCount, edgeCount, langCount, depth) {
-    if (statNodes) statNodes.textContent = nodeCount;
-    if (statEdges) statEdges.textContent = edgeCount;
-    if (statLangs) statLangs.textContent = langCount;
-    if (statDepth) statDepth.textContent = depth;
 }
 
 // Update info summary with language breakdown
@@ -686,14 +626,6 @@ if (depthMinus) {
 }
 if (depthPlus) {
     depthPlus.addEventListener('click', () => changeDepth(1));
-}
-
-// Stats toggle
-if (statsToggle && statsPanel) {
-    statsToggle.addEventListener('click', () => {
-        const isHidden = statsPanel.classList.toggle('hidden');
-        statsToggle.classList.toggle('active', !isHidden);
-    });
 }
 
 // Expand/minimize graph functionality

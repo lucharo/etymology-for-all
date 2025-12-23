@@ -470,69 +470,6 @@ button:active {
     font-size: 0.75rem;
 }
 
-/* Stats toggle button */
-.stats-toggle {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    margin-left: auto;
-    padding: var(--space-xs) var(--space-sm);
-    font-size: 0.75rem;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text-muted);
-    cursor: pointer;
-}
-
-.stats-toggle:hover {
-    background: var(--bg);
-    color: var(--text);
-}
-
-.stats-toggle.active {
-    background: var(--accent-light);
-    border-color: var(--accent);
-    color: var(--accent);
-}
-
-/* Stats panel (below word-info) */
-.stats-panel {
-    margin-top: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-}
-
-.stats-grid {
-    display: flex;
-    justify-content: center;
-    gap: var(--space-lg);
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-}
-
-.stat-value {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text);
-    font-family: var(--font-mono);
-}
-
-.stat-label {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-
 /* Node detail panel */
 #node-detail {
     position: absolute;
