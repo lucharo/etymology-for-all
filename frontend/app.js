@@ -355,7 +355,7 @@ async function fetchRandomWord() {
 }
 
 // Build and render graph (with optional depth filtering)
-function renderGraph(data, searchedWord, filterByDepth = true) {
+function renderGraph(data, searchedWord, filterByDepth = true, animate = true) {
     if (!data.nodes || data.nodes.length === 0) {
         showError('No etymology data available for this word');
         return;
@@ -432,15 +432,19 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
         nodeSep: direction === 'LR' ? 40 : 30,
         rankSep: direction === 'LR' ? 80 : 60,
         padding: 30,
-        animate: true,
-        animationDuration: 500,
+        animate: animate,
+        animationDuration: animate ? 500 : 0,
         animationEasing: 'ease-out',
     }).run();
 
-    // Fit to viewport
-    setTimeout(() => {
+    // Fit to viewport (skip animation if not animating)
+    if (animate) {
+        setTimeout(() => {
+            cy.fit(undefined, 40);
+        }, 550);
+    } else {
         cy.fit(undefined, 40);
-    }, 550);
+    }
 
     // Update direction indicator
     if (directionIndicator) {
@@ -461,11 +465,12 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
     showGraph();
 
     // Update stats after layout completes
+    const statsDelay = animate ? 600 : 50;
     setTimeout(() => {
         const graphDepth = calculateGraphDepth(cy, searchedWord);
         const roots = findRootAncestors(cy);
         updateStats(displayData.nodes.length, displayData.edges.length, langCounts.size, graphDepth, roots);
-    }, 600);
+    }, statsDelay);
 }
 
 // Calculate graph depth using BFS from the searched word
@@ -681,9 +686,9 @@ function changeDepth(delta) {
     currentDepth = newDepth;
     updateDepthUI();
 
-    // Re-render with new depth (client-side, no fetch!)
+    // Re-render with new depth (client-side, no fetch, no animation!)
     if (fullGraphData && currentSearchedWord) {
-        renderGraph(fullGraphData, currentSearchedWord, true);
+        renderGraph(fullGraphData, currentSearchedWord, true, false);
     }
 }
 
