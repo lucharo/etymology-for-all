@@ -107,7 +107,8 @@ let cy = null;
 let fullGraphData = null; // Full graph data (max depth)
 let currentSearchedWord = null;
 let currentDepth = 5; // Current display depth
-const MAX_DEPTH = 10;
+let graphMaxDepth = 10; // Actual max depth of current graph
+const FETCH_DEPTH = 10; // Depth to fetch from API
 const MIN_DEPTH = 1;
 let searchTimeout = null;
 let selectedSuggestionIndex = -1;
@@ -272,9 +273,19 @@ function showGraph() {
 
 // Fetch etymology data (always fetch max depth for client-side filtering)
 async function fetchEtymology(word) {
-    const response = await fetch(`/graph/${encodeURIComponent(word)}?depth=${MAX_DEPTH}`);
+    const response = await fetch(`/graph/${encodeURIComponent(word)}?depth=${FETCH_DEPTH}`);
     await handleApiResponse(response, 'etymology lookup');
     return response.json();
+}
+
+// Calculate the maximum depth in the graph
+function calculateMaxGraphDepth(nodes, edges, startWord) {
+    const nodeDepths = computeNodeDepths(nodes, edges, startWord);
+    let maxDepth = 0;
+    nodeDepths.forEach(depth => {
+        if (depth > maxDepth) maxDepth = depth;
+    });
+    return maxDepth;
 }
 
 // Compute depth of each node from the starting word using BFS
@@ -343,7 +354,7 @@ function filterGraphByDepth(data, maxDepth, searchedWord) {
 function updateDepthUI() {
     if (depthValue) depthValue.textContent = currentDepth;
     if (depthMinus) depthMinus.disabled = currentDepth <= MIN_DEPTH;
-    if (depthPlus) depthPlus.disabled = currentDepth >= MAX_DEPTH;
+    if (depthPlus) depthPlus.disabled = currentDepth >= graphMaxDepth;
 }
 
 // Fetch random word
@@ -365,6 +376,12 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
     if (!filterByDepth || !fullGraphData || currentSearchedWord !== searchedWord) {
         fullGraphData = data;
         currentSearchedWord = searchedWord;
+        // Calculate actual max depth of this graph
+        graphMaxDepth = calculateMaxGraphDepth(data.nodes, data.edges, searchedWord);
+        // Clamp current depth to graph max
+        if (currentDepth > graphMaxDepth) {
+            currentDepth = Math.max(graphMaxDepth, MIN_DEPTH);
+        }
     }
 
     // Apply depth filter
@@ -672,7 +689,7 @@ randomBtn.addEventListener('click', handleRandom);
 // Depth +/- button event listeners
 function changeDepth(delta) {
     const newDepth = currentDepth + delta;
-    if (newDepth < MIN_DEPTH || newDepth > MAX_DEPTH) return;
+    if (newDepth < MIN_DEPTH || newDepth > graphMaxDepth) return;
 
     currentDepth = newDepth;
     updateDepthUI();
