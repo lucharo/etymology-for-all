@@ -99,9 +99,12 @@ h1 {
 /* Graph options */
 .graph-options {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     gap: var(--space-md);
     margin-bottom: var(--space-sm);
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .depth-control {
