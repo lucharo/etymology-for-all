@@ -444,10 +444,7 @@ function showSuggestions(results) {
         .map(
             (r, i) => `
             <div class="suggestion-item" data-index="${i}" data-word="${r.word}">
-                <div class="suggestion-main">
-                    <span class="suggestion-word">${r.word}</span>
-                    ${r.ancestors > 0 ? `<span class="suggestion-ancestors">${r.ancestors} ${r.ancestors === 1 ? 'ancestor' : 'ancestors'}</span>` : '<span class="suggestion-ancestors single">no etymology</span>'}
-                </div>
+                <span class="suggestion-word">${r.word}</span>
                 ${r.sense ? `<div class="suggestion-sense">${truncate(r.sense, 60)}</div>` : ''}
             </div>
         `

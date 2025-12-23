@@ -29,7 +29,17 @@ def _prepare_test_database() -> None:
                 (1, "en", "mother", "mother"),
                 (2, "proto-germanic", "mōdēr", "mother"),
                 (3, "proto-indo-european", "méh₂tēr", "mother"),
-                (4, "en", "river", "river"),
+                (4, "en", "loneword", "a word with no etymology links"),
+                # Multiple entries for "twin" with different senses - both shown in search
+                (100, "en", "twin", "twin sense A"),  # 1 link
+                (101, "en", "twin", "twin sense B"),  # 3 links (graph uses richest)
+                (102, "proto-germanic", "twinjaz", "twin"),
+                (103, "proto-indo-european", "dwóh₁", "two"),
+                (104, "la", "geminus", "twin"),
+                # Meta-lexeme: sense=NULL is a hub for cognates
+                (200, "en", "friend", None),  # Meta-lexeme (hub node)
+                (201, "de", "Freund", "friend"),  # German cognate
+                (202, "proto-germanic", "frijōndz", "friend"),  # Proto-Germanic ancestor
             ],
         )
         conn.executemany(
@@ -37,6 +47,18 @@ def _prepare_test_database() -> None:
             [
                 ("inh", 1, 2),
                 ("inh", 2, 3),
+                # twin entry 100 has 1 link
+                ("inh", 100, 102),
+                # twin entry 101 has 3 links (richer etymology)
+                ("inh", 101, 102),
+                ("cog", 101, 103),
+                ("cog", 101, 104),
+                # Continue the chain
+                ("inh", 102, 103),
+                # Meta-lexeme: cognates point TO it (incoming links)
+                ("cog", 201, 200),  # German "Freund" -> English "friend" (meta-lexeme)
+                # Meta-lexeme also has outgoing etymology
+                ("inh", 200, 202),  # friend inherited from Proto-Germanic
             ],
         )
         conn.execute("CREATE INDEX idx_words_word_ix ON words(word_ix)")
@@ -63,33 +85,17 @@ def _prepare_test_database() -> None:
             )
         """)
 
-        # Definitions enrichment table
+        # Definitions table (lexeme is lowercase for fast equality joins)
         conn.execute("""
-            CREATE TABLE definitions_raw (
+            CREATE TABLE definitions (
                 lexeme VARCHAR PRIMARY KEY,
-                api_response JSON,
-                fetched_at TIMESTAMP,
-                status VARCHAR
-            )
-        """)
-        # Insert a test definition
-        conn.execute("""
-            INSERT INTO definitions_raw VALUES (
-                'mother',
-                '[{"word": "mother", "meanings": [{"partOfSpeech": "noun", "definitions": [{"definition": "A female parent"}]}]}]',
-                '2024-12-19 10:00:00',
-                'success'
+                definition VARCHAR,
+                part_of_speech VARCHAR,
+                phonetic VARCHAR
             )
         """)
         conn.execute("""
-            CREATE VIEW v_definitions AS
-            SELECT
-                lexeme,
-                CAST(api_response->'$[0]'->'meanings'->'$[0]'->'definitions'->'$[0]'->'definition' AS VARCHAR) as definition,
-                CAST(api_response->'$[0]'->'meanings'->'$[0]'->'partOfSpeech' AS VARCHAR) as part_of_speech,
-                CAST(api_response->'$[0]'->'phonetic' AS VARCHAR) as phonetic
-            FROM definitions_raw
-            WHERE status = 'success'
+            INSERT INTO definitions VALUES ('mother', 'A female parent', 'noun', NULL)
         """)
 
 
@@ -115,12 +121,54 @@ def test_graph_endpoint_missing_word():
     assert response.status_code == 404
 
 
+def test_graph_endpoint_word_without_etymology():
+    """Test that words with no etymology links return 404."""
+    # "loneword" exists in DB but has no links, so it should return 404
+    response = client.get("/graph/loneword")
+    assert response.status_code == 404
+
+
 def test_random_endpoint_returns_word():
     response = client.get("/random")
     assert response.status_code == 200
-    # Only "mother" is in v_english_curated (has etymology, is clean)
-    # "river" has no etymology links so it's excluded
-    assert response.json()["word"] == "mother"
+    # "mother", "twin", and "friend" are in v_english_curated (has etymology, is clean)
+    # "loneword" has no etymology links so it's excluded
+    assert response.json()["word"] in ["mother", "twin", "friend"]
+
+
+def test_graph_picks_entry_with_most_links():
+    """Test that when duplicate entries exist, we pick the one with most etymology links."""
+    response = client.get("/graph/twin")
+    assert response.status_code == 200
+    payload = response.json()
+
+    # twin entry 101 has 3 links, entry 100 has 1 link
+    # We should get the richer graph (4 nodes: twin, twinjaz, dwóh₁, geminus)
+    assert len(payload["nodes"]) == 4
+    assert len(payload["edges"]) >= 3
+
+    # Verify we have all expected nodes
+    lexemes = {n["lexeme"] for n in payload["nodes"]}
+    assert "twin" in lexemes
+    assert "twinjaz" in lexemes
+    assert "dwóh₁" in lexemes
+    assert "geminus" in lexemes
+
+
+def test_search_shows_all_valid_senses():
+    """Test that search returns all entries with valid senses."""
+    response = client.get("/search?q=twin")
+    assert response.status_code == 200
+    results = response.json()["results"]
+
+    # Should show both "twin" entries since they have different senses
+    twin_results = [r for r in results if r["word"] == "twin"]
+    assert len(twin_results) == 2
+
+    # Each should have its sense
+    senses = {r["sense"] for r in twin_results}
+    assert "twin sense A" in senses
+    assert "twin sense B" in senses
 
 
 def test_enriched_definition_used_for_english_words():
@@ -138,3 +186,22 @@ def test_enriched_definition_used_for_english_words():
     # Should use enriched definition instead of EtymDB sense
     assert "sense" in mother_node
     assert mother_node["sense"] == "A female parent"
+
+
+def test_null_sense_filtered_shows_definition():
+    """Test that sense=NULL entries are filtered out, showing Free Dictionary definition.
+
+    NULL senses are structural entries without meaningful info.
+    When no useful senses exist, we fall back to Free Dictionary definition.
+    """
+    response = client.get("/search?q=friend")
+    assert response.status_code == 200
+    results = response.json()["results"]
+
+    # Should find the "friend" entry
+    friend_results = [r for r in results if r["word"] == "friend"]
+    assert len(friend_results) == 1
+
+    # Should show Free Dictionary definition (or None if not enriched in test DB)
+    # The NULL sense entry should be filtered out, not displayed
+    assert friend_results[0]["sense"] != "MetaLexeme"
