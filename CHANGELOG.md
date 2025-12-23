@@ -7,7 +7,8 @@ Human-readable history of the Etymology Graph Explorer.
 ## v0.9.0 - Language Name Mappings (2024-12-23)
 
 ### Language Display
-- **10,710 language codes** now display human-readable names instead of shortcodes
+- **10,710 language code mappings** from combined sources
+- **91.9% coverage** of EtymDB's 2,536 unique language codes (2,331 mapped)
 - Proto-languages like `gem-pro` → "Proto-Germanic", `ine-pro` → "Proto-Indo-European"
 - Historical languages like `ofs` → "Old Frisian", `xcl` → "Classical Armenian"
 
