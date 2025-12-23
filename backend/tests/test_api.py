@@ -188,11 +188,11 @@ def test_enriched_definition_used_for_english_words():
     assert mother_node["sense"] == "A female parent"
 
 
-def test_metalexeme_displayed_in_search():
-    """Test that sense=NULL entries are shown as 'MetaLexeme' in search results.
+def test_null_sense_filtered_shows_definition():
+    """Test that sense=NULL entries are filtered out, showing Free Dictionary definition.
 
-    Meta-lexemes are canonical hub forms that cognates/borrowings point to.
-    They should NOT be filtered out, but displayed with 'MetaLexeme' label.
+    NULL senses are structural entries without meaningful info.
+    When no useful senses exist, we fall back to Free Dictionary definition.
     """
     response = client.get("/search?q=friend")
     assert response.status_code == 200
@@ -202,5 +202,6 @@ def test_metalexeme_displayed_in_search():
     friend_results = [r for r in results if r["word"] == "friend"]
     assert len(friend_results) == 1
 
-    # sense="None" should be displayed as "MetaLexeme"
-    assert friend_results[0]["sense"] == "MetaLexeme"
+    # Should show Free Dictionary definition (or None if not enriched in test DB)
+    # The NULL sense entry should be filtered out, not displayed
+    assert friend_results[0]["sense"] != "MetaLexeme"

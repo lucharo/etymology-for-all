@@ -280,31 +280,20 @@ def fetch_all_language_families() -> dict[str, dict[str, str]]:
 def _is_useful_sense(sense: str | None, lexeme: str) -> bool:
     """Check if a sense provides useful information beyond the lexeme itself.
 
-    Note: NULL/None senses are meta-lexemes (hub nodes for cognate networks).
-    These are kept as useful - they represent canonical forms that other words
-    point to via cognate/borrowing links.
+    NULL senses are filtered out - they're structural entries without
+    meaningful definitions. We prefer entries where sense differs from lexeme.
     """
-    # NULL sense = meta-lexeme (hub node) - this IS useful
     if sense is None:
-        return True
+        return False
     sense_lower = sense.lower().strip('"')
     lexeme_lower = lexeme.lower()
-    # Not useful: empty string or equals lexeme
+    # Not useful: NULL, empty string, or equals lexeme
     return sense_lower != "" and sense_lower != lexeme_lower
 
 
-def _format_sense_for_display(sense: str | None) -> str:
-    """Format a sense for display in the UI.
-
-    NULL/None senses become 'MetaLexeme' - these are canonical hub forms
-    that cognates/borrowings point to.
-    """
-    if sense is None:
-        return "MetaLexeme"
-    cleaned = sense.strip('"')
-    if cleaned.lower() == "none":
-        return "MetaLexeme"
-    return cleaned
+def _format_sense_for_display(sense: str) -> str:
+    """Format a sense for display in the UI."""
+    return sense.strip('"')
 
 
 def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
