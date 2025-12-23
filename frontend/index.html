@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=29">
+    <link rel="stylesheet" href="styles.css?v=28">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
@@ -146,6 +146,36 @@
             <span id="current-word"></span>
             <span class="info-divider"></span>
             <div id="lang-breakdown"></div>
+            <button id="stats-toggle" class="stats-toggle" title="Toggle graph statistics">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                Graph Stats
+            </button>
+        </div>
+
+        <!-- Stats panel expands below word-info, pushing footer down -->
+        <div id="stats-panel" class="stats-panel hidden">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-nodes">0</span>
+                    <span class="stat-label">nodes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-edges">0</span>
+                    <span class="stat-label">edges</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-langs">0</span>
+                    <span class="stat-label">languages</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-depth">0</span>
+                    <span class="stat-label">depth</span>
+                </div>
+            </div>
         </div>
 
         <!-- About Modal -->
@@ -274,6 +304,6 @@
         <p>Built by <a href="https://github.com/lucharo" target="_blank" rel="noopener">@lucharo</a> · <a href="https://github.com/lucharo/etymology-for-all" target="_blank" rel="noopener">Source code</a></p>
     </footer>
 
-    <script src="app.js?v=29"></script>
+    <script src="app.js?v=28"></script>
 </body>
 </html>
