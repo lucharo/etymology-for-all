@@ -384,10 +384,8 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
         currentSearchedWord = searchedWord;
         // Calculate actual max depth of this graph
         graphMaxDepth = calculateMaxGraphDepth(data.nodes, data.edges, searchedWord);
-        // Clamp current depth to graph max
-        if (currentDepth > graphMaxDepth) {
-            currentDepth = Math.max(graphMaxDepth, MIN_DEPTH);
-        }
+        // Default to max depth for new searches
+        currentDepth = graphMaxDepth;
     }
 
     // Apply depth filter
