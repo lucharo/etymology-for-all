@@ -729,13 +729,10 @@ function toggleExpandGraph() {
     graphContainer.classList.toggle('expanded', isExpanded);
     if (graphBackdrop) graphBackdrop.classList.toggle('visible', isExpanded);
 
-    // Re-fit graph after transition completes
+    // Just resize - don't refit to avoid jolt
     setTimeout(() => {
-        if (cy) {
-            cy.resize();
-            cy.fit(undefined, 40);
-        }
-    }, 350); // Match CSS transition duration
+        if (cy) cy.resize();
+    }, 350);
 }
 
 function minimizeGraph() {
@@ -744,12 +741,9 @@ function minimizeGraph() {
         graphContainer.classList.remove('expanded');
         if (graphBackdrop) graphBackdrop.classList.remove('visible');
 
-        // Re-fit graph after transition completes
+        // Just resize - don't refit to avoid jolt
         setTimeout(() => {
-            if (cy) {
-                cy.resize();
-                cy.fit(undefined, 40);
-            }
+            if (cy) cy.resize();
         }, 350);
     }
 }
