@@ -847,6 +847,14 @@ button:active {
     border-left: 3px solid var(--accent);
 }
 
+.tab-content code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
 .tab-content ol,
 .tab-content ul {
     margin-bottom: var(--space-sm);

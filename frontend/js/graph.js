@@ -178,14 +178,18 @@ export function calculateGraphDepth(startWord) {
 
 export function renderGraphElements(displayData, directionIndicator) {
     const elements = [];
-    const seenLangs = new Map();
-    const langCounts = new Map();
+    const seenLangs = new Map();  // lang code -> lang name
+    const langCounts = new Map(); // lang name -> count
+    const langCodes = new Map();  // lang name -> lang code (for display)
 
     displayData.nodes.forEach((node) => {
         const langName = node.lang_name || getLangName(node.lang);
         const displayWord = node.lexeme || node.id;
         seenLangs.set(node.lang, langName);
         langCounts.set(langName, (langCounts.get(langName) || 0) + 1);
+        if (!langCodes.has(langName)) {
+            langCodes.set(langName, node.lang);
+        }
 
         elements.push({
             group: 'nodes',
@@ -241,5 +245,5 @@ export function renderGraphElements(displayData, directionIndicator) {
         }
     }
 
-    return { seenLangs, langCounts };
+    return { seenLangs, langCounts, langCodes };
 }

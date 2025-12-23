@@ -45,5 +45,6 @@ export async function handleApiResponse(response, context = 'request') {
 export function buildNodeLabel(node) {
     const langName = node.lang_name || getLangName(node.lang);
     const displayWord = node.lexeme || node.id;
+    // Keep nodes clean: just word + language name
     return displayWord + '\n(' + langName.toLowerCase() + ')';
 }

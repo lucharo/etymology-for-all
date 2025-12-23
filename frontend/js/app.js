@@ -106,10 +106,10 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
 
     hideNodeDetail(elements.nodeDetail);
 
-    const { seenLangs, langCounts } = renderGraphElements(displayData, elements.directionIndicator);
+    const { seenLangs, langCounts, langCodes } = renderGraphElements(displayData, elements.directionIndicator);
 
     elements.currentWord.textContent = searchedWord;
-    updateInfoSummary(langCounts, elements.langBreakdown);
+    updateInfoSummary(langCounts, langCodes, elements.langBreakdown);
     elements.wordInfo.classList.remove('hidden');
     showGraph(elements);
 
