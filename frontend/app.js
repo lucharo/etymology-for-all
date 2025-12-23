@@ -729,13 +729,15 @@ function toggleExpandGraph() {
     graphContainer.classList.toggle('expanded', isExpanded);
     if (graphBackdrop) graphBackdrop.classList.toggle('visible', isExpanded);
 
-    // Resize and center (keeps zoom level, just centers in new viewport)
+    // After CSS transition, resize and animate fit
     setTimeout(() => {
         if (cy) {
             cy.resize();
-            cy.center();
+            cy.animate({
+                fit: { eles: cy.elements(), padding: 40 }
+            }, { duration: 200, easing: 'ease-out' });
         }
-    }, 350);
+    }, 320);
 }
 
 function minimizeGraph() {
@@ -744,13 +746,15 @@ function minimizeGraph() {
         graphContainer.classList.remove('expanded');
         if (graphBackdrop) graphBackdrop.classList.remove('visible');
 
-        // Resize and fit (fit to smaller viewport)
+        // After CSS transition, resize and animate fit
         setTimeout(() => {
             if (cy) {
                 cy.resize();
-                cy.fit(undefined, 40);
+                cy.animate({
+                    fit: { eles: cy.elements(), padding: 40 }
+                }, { duration: 200, easing: 'ease-out' });
             }
-        }, 350);
+        }, 320);
     }
 }
 
