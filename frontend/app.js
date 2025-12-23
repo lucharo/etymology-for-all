@@ -91,8 +91,18 @@ const detailSense = document.getElementById('detail-sense');
 const detailClose = document.getElementById('detail-close');
 const suggestions = document.getElementById('suggestions');
 const directionIndicator = document.getElementById('direction-indicator');
+const depthSlider = document.getElementById('depth-slider');
+const depthValue = document.getElementById('depth-value');
+const statsToggle = document.getElementById('stats-toggle');
+const statsPanel = document.getElementById('stats-panel');
+const statNodes = document.getElementById('stat-nodes');
+const statEdges = document.getElementById('stat-edges');
+const statLangs = document.getElementById('stat-langs');
+const statDepth = document.getElementById('stat-depth');
+const statRoot = document.getElementById('stat-root');
 
 let cy = null;
+let currentGraphData = null; // Store graph data for re-rendering on depth change
 let searchTimeout = null;
 let selectedSuggestionIndex = -1;
 
@@ -232,6 +242,8 @@ function showLoading() {
     emptyState.classList.add('hidden');
     errorState.classList.add('hidden');
     wordInfo.classList.add('hidden');
+    if (statsPanel) statsPanel.classList.add('hidden');
+    if (statsToggle) statsToggle.classList.remove('active');
     if (directionIndicator) directionIndicator.classList.add('hidden');
     if (cy) cy.elements().remove();
 }
@@ -252,8 +264,9 @@ function showGraph() {
 }
 
 // Fetch etymology data
-async function fetchEtymology(word) {
-    const response = await fetch(`/graph/${encodeURIComponent(word)}`);
+async function fetchEtymology(word, depth = null) {
+    const depthParam = depth || (depthSlider ? depthSlider.value : 5);
+    const response = await fetch(`/graph/${encodeURIComponent(word)}?depth=${depthParam}`);
     await handleApiResponse(response, 'etymology lookup');
     return response.json();
 }
@@ -272,6 +285,9 @@ function renderGraph(data, searchedWord) {
         showError('No etymology data available for this word');
         return;
     }
+
+    // Store data for potential re-render on depth change
+    currentGraphData = { data, searchedWord };
 
     // Hide any open detail panel
     hideNodeDetail();
@@ -356,6 +372,80 @@ function renderGraph(data, searchedWord) {
     updateInfoSummary(seenLangs, langCounts);
     wordInfo.classList.remove('hidden');
     showGraph();
+
+    // Update stats after layout completes
+    setTimeout(() => {
+        const graphDepth = calculateGraphDepth(cy, searchedWord);
+        const roots = findRootAncestors(cy);
+        updateStats(data.nodes.length, data.edges.length, langCounts.size, graphDepth, roots);
+    }, 600);
+}
+
+// Calculate graph depth using BFS from the searched word
+function calculateGraphDepth(cy, startWord) {
+    if (!cy || cy.nodes().length === 0) return 0;
+
+    // Find the starting node (English node matching the word)
+    const startNode = cy.nodes().filter(n => {
+        const word = n.data('word');
+        const lang = n.data('lang');
+        return word && word.toLowerCase() === startWord.toLowerCase() && lang === 'en';
+    }).first();
+
+    if (!startNode || startNode.length === 0) return 0;
+
+    // BFS to find maximum depth
+    const visited = new Set();
+    const queue = [{ node: startNode, depth: 0 }];
+    let maxDepth = 0;
+
+    while (queue.length > 0) {
+        const { node, depth } = queue.shift();
+        const nodeId = node.id();
+
+        if (visited.has(nodeId)) continue;
+        visited.add(nodeId);
+        maxDepth = Math.max(maxDepth, depth);
+
+        // Get connected nodes via outgoing edges (source -> target means source is newer)
+        const outgoers = node.outgoers('node');
+        outgoers.forEach(neighbor => {
+            if (!visited.has(neighbor.id())) {
+                queue.push({ node: neighbor, depth: depth + 1 });
+            }
+        });
+    }
+
+    return maxDepth;
+}
+
+// Find the oldest ancestor(s) in the graph
+function findRootAncestors(cy) {
+    if (!cy || cy.nodes().length === 0) return [];
+
+    // Root ancestors have no outgoing edges (nothing they derive from)
+    const roots = cy.nodes().filter(n => n.outgoers('edge').length === 0);
+
+    return roots.map(n => ({
+        word: n.data('word'),
+        lang: n.data('langName') || getLangName(n.data('lang'))
+    }));
+}
+
+// Update stats panel
+function updateStats(nodeCount, edgeCount, langCount, depth, roots) {
+    if (statNodes) statNodes.textContent = nodeCount;
+    if (statEdges) statEdges.textContent = edgeCount;
+    if (statLangs) statLangs.textContent = langCount;
+    if (statDepth) statDepth.textContent = depth;
+
+    if (statRoot && roots.length > 0) {
+        const rootText = roots.slice(0, 3).map(r => `${r.word} (${r.lang})`).join(', ');
+        const suffix = roots.length > 3 ? ` +${roots.length - 3} more` : '';
+        statRoot.innerHTML = `<strong>Roots:</strong> ${rootText}${suffix}`;
+    } else if (statRoot) {
+        statRoot.textContent = '';
+    }
 }
 
 // Update info summary with language breakdown
@@ -495,6 +585,35 @@ function navigateSuggestions(direction) {
 // Event listeners
 searchBtn.addEventListener('click', handleSearch);
 randomBtn.addEventListener('click', handleRandom);
+
+// Depth slider event listeners
+if (depthSlider && depthValue) {
+    depthSlider.addEventListener('input', (e) => {
+        depthValue.textContent = e.target.value;
+    });
+
+    depthSlider.addEventListener('change', async () => {
+        // Re-fetch with new depth if we have a current word
+        const word = wordInput.value.trim();
+        if (word) {
+            showLoading();
+            try {
+                const data = await fetchEtymology(word);
+                renderGraph(data, word);
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+    });
+}
+
+// Stats toggle
+if (statsToggle && statsPanel) {
+    statsToggle.addEventListener('click', () => {
+        const isHidden = statsPanel.classList.toggle('hidden');
+        statsToggle.classList.toggle('active', !isHidden);
+    });
+}
 
 // Input event for autocomplete
 wordInput.addEventListener('input', (e) => {
