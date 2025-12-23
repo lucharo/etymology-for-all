@@ -101,31 +101,45 @@ h1 {
     display: flex;
     justify-content: center;
     gap: var(--space-md);
-    margin-bottom: var(--space-md);
+    margin-bottom: var(--space-sm);
 }
 
 .depth-control {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
     font-size: 0.8rem;
     color: var(--text-muted);
 }
 
 .depth-label {
     font-weight: 500;
+    margin-right: var(--space-xs);
 }
 
-#depth-slider {
-    width: 100px;
-    accent-color: var(--accent);
-    cursor: pointer;
+.depth-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.depth-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .depth-value {
     min-width: 1.5em;
     text-align: center;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 0.9rem;
     color: var(--text);
 }
 
@@ -850,15 +864,16 @@ footer a:hover {
     }
 
     .graph-options {
-        margin-bottom: var(--space-sm);
+        margin-bottom: var(--space-xs);
     }
 
     .depth-control {
         font-size: 0.75rem;
     }
 
-    #depth-slider {
-        width: 80px;
+    .depth-btn {
+        width: 32px;
+        height: 32px;
     }
 
     #word-input {

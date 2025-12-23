@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=19">
+    <link rel="stylesheet" href="styles.css?v=20">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
@@ -68,12 +68,13 @@
         <p class="search-hint">Click any word in the graph to see its definition</p>
 
         <!-- Graph options -->
-        <div id="graph-options" class="graph-options">
-            <label class="depth-control">
+        <div id="graph-options" class="graph-options hidden">
+            <div class="depth-control">
                 <span class="depth-label">Depth:</span>
-                <input type="range" id="depth-slider" min="1" max="10" value="5">
+                <button id="depth-minus" class="depth-btn" title="Decrease depth">−</button>
                 <span id="depth-value" class="depth-value">5</span>
-            </label>
+                <button id="depth-plus" class="depth-btn" title="Increase depth">+</button>
+            </div>
         </div>
 
         <div id="graph-container">
@@ -285,6 +286,6 @@
         <p>Built by <a href="https://github.com/lucharo" target="_blank" rel="noopener">@lucharo</a> · <a href="https://github.com/lucharo/etymology-for-all" target="_blank" rel="noopener">Source code</a></p>
     </footer>
 
-    <script src="app.js?v=19"></script>
+    <script src="app.js?v=20"></script>
 </body>
 </html>

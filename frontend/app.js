@@ -91,8 +91,10 @@ const detailSense = document.getElementById('detail-sense');
 const detailClose = document.getElementById('detail-close');
 const suggestions = document.getElementById('suggestions');
 const directionIndicator = document.getElementById('direction-indicator');
-const depthSlider = document.getElementById('depth-slider');
+const depthMinus = document.getElementById('depth-minus');
+const depthPlus = document.getElementById('depth-plus');
 const depthValue = document.getElementById('depth-value');
+const graphOptions = document.getElementById('graph-options');
 const statsToggle = document.getElementById('stats-toggle');
 const statsPanel = document.getElementById('stats-panel');
 const statNodes = document.getElementById('stat-nodes');
@@ -102,7 +104,11 @@ const statDepth = document.getElementById('stat-depth');
 const statRoot = document.getElementById('stat-root');
 
 let cy = null;
-let currentGraphData = null; // Store graph data for re-rendering on depth change
+let fullGraphData = null; // Full graph data (max depth)
+let currentSearchedWord = null;
+let currentDepth = 5; // Current display depth
+const MAX_DEPTH = 10;
+const MIN_DEPTH = 1;
 let searchTimeout = null;
 let selectedSuggestionIndex = -1;
 
@@ -242,6 +248,7 @@ function showLoading() {
     emptyState.classList.add('hidden');
     errorState.classList.add('hidden');
     wordInfo.classList.add('hidden');
+    if (graphOptions) graphOptions.classList.add('hidden');
     if (statsPanel) statsPanel.classList.add('hidden');
     if (statsToggle) statsToggle.classList.remove('active');
     if (directionIndicator) directionIndicator.classList.add('hidden');
@@ -263,12 +270,80 @@ function showGraph() {
     errorState.classList.add('hidden');
 }
 
-// Fetch etymology data
-async function fetchEtymology(word, depth = null) {
-    const depthParam = depth || (depthSlider ? depthSlider.value : 5);
-    const response = await fetch(`/graph/${encodeURIComponent(word)}?depth=${depthParam}`);
+// Fetch etymology data (always fetch max depth for client-side filtering)
+async function fetchEtymology(word) {
+    const response = await fetch(`/graph/${encodeURIComponent(word)}?depth=${MAX_DEPTH}`);
     await handleApiResponse(response, 'etymology lookup');
     return response.json();
+}
+
+// Compute depth of each node from the starting word using BFS
+function computeNodeDepths(nodes, edges, startWord) {
+    const nodeDepths = new Map();
+    const adjacency = new Map(); // node id -> [connected node ids]
+
+    // Build adjacency list from edges (source -> target means source derives from target)
+    edges.forEach(edge => {
+        if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
+        adjacency.get(edge.source).push(edge.target);
+    });
+
+    // Find starting node (English node matching the word)
+    const startNode = nodes.find(n =>
+        n.lexeme && n.lexeme.toLowerCase() === startWord.toLowerCase() && n.lang === 'en'
+    );
+
+    if (!startNode) {
+        // Fallback: use first node
+        nodes.forEach(n => nodeDepths.set(n.id, 0));
+        return nodeDepths;
+    }
+
+    // BFS from start node
+    const queue = [{ id: startNode.id, depth: 0 }];
+    nodeDepths.set(startNode.id, 0);
+
+    while (queue.length > 0) {
+        const { id, depth } = queue.shift();
+        const neighbors = adjacency.get(id) || [];
+
+        neighbors.forEach(neighborId => {
+            if (!nodeDepths.has(neighborId)) {
+                nodeDepths.set(neighborId, depth + 1);
+                queue.push({ id: neighborId, depth: depth + 1 });
+            }
+        });
+    }
+
+    // Handle disconnected nodes (shouldn't happen but just in case)
+    nodes.forEach(n => {
+        if (!nodeDepths.has(n.id)) nodeDepths.set(n.id, MAX_DEPTH);
+    });
+
+    return nodeDepths;
+}
+
+// Filter graph data by depth
+function filterGraphByDepth(data, maxDepth, searchedWord) {
+    const nodeDepths = computeNodeDepths(data.nodes, data.edges, searchedWord);
+
+    // Filter nodes within depth
+    const filteredNodes = data.nodes.filter(n => nodeDepths.get(n.id) <= maxDepth);
+    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
+
+    // Filter edges where both endpoints are in filtered nodes
+    const filteredEdges = data.edges.filter(e =>
+        filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)
+    );
+
+    return { nodes: filteredNodes, edges: filteredEdges };
+}
+
+// Update depth display and buttons
+function updateDepthUI() {
+    if (depthValue) depthValue.textContent = currentDepth;
+    if (depthMinus) depthMinus.disabled = currentDepth <= MIN_DEPTH;
+    if (depthPlus) depthPlus.disabled = currentDepth >= MAX_DEPTH;
 }
 
 // Fetch random word
@@ -279,15 +354,27 @@ async function fetchRandomWord() {
     return data.word;
 }
 
-// Build and render graph
-function renderGraph(data, searchedWord) {
+// Build and render graph (with optional depth filtering)
+function renderGraph(data, searchedWord, filterByDepth = true) {
     if (!data.nodes || data.nodes.length === 0) {
         showError('No etymology data available for this word');
         return;
     }
 
-    // Store data for potential re-render on depth change
-    currentGraphData = { data, searchedWord };
+    // Store full data for client-side filtering
+    if (!filterByDepth || !fullGraphData || currentSearchedWord !== searchedWord) {
+        fullGraphData = data;
+        currentSearchedWord = searchedWord;
+    }
+
+    // Apply depth filter
+    const displayData = filterByDepth
+        ? filterGraphByDepth(fullGraphData, currentDepth, searchedWord)
+        : data;
+
+    // Show graph options when we have a graph
+    if (graphOptions) graphOptions.classList.remove('hidden');
+    updateDepthUI();
 
     // Hide any open detail panel
     hideNodeDetail();
@@ -298,7 +385,7 @@ function renderGraph(data, searchedWord) {
     const langCounts = new Map(); // lang name -> count
 
     // Add nodes
-    data.nodes.forEach((node) => {
+    displayData.nodes.forEach((node) => {
         const langName = node.lang_name || getLangName(node.lang);
         const displayWord = node.lexeme || node.id;
         seenLangs.set(node.lang, langName);
@@ -321,7 +408,7 @@ function renderGraph(data, searchedWord) {
     });
 
     // Add edges (filter out self-loops where source equals target)
-    data.edges.forEach((edge) => {
+    displayData.edges.forEach((edge) => {
         if (edge.source === edge.target) return; // Skip self-loops
         elements.push({
             group: 'edges',
@@ -377,7 +464,7 @@ function renderGraph(data, searchedWord) {
     setTimeout(() => {
         const graphDepth = calculateGraphDepth(cy, searchedWord);
         const roots = findRootAncestors(cy);
-        updateStats(data.nodes.length, data.edges.length, langCounts.size, graphDepth, roots);
+        updateStats(displayData.nodes.length, displayData.edges.length, langCounts.size, graphDepth, roots);
     }, 600);
 }
 
@@ -586,25 +673,25 @@ function navigateSuggestions(direction) {
 searchBtn.addEventListener('click', handleSearch);
 randomBtn.addEventListener('click', handleRandom);
 
-// Depth slider event listeners
-if (depthSlider && depthValue) {
-    depthSlider.addEventListener('input', (e) => {
-        depthValue.textContent = e.target.value;
-    });
+// Depth +/- button event listeners
+function changeDepth(delta) {
+    const newDepth = currentDepth + delta;
+    if (newDepth < MIN_DEPTH || newDepth > MAX_DEPTH) return;
 
-    depthSlider.addEventListener('change', async () => {
-        // Re-fetch with new depth if we have a current word
-        const word = wordInput.value.trim();
-        if (word) {
-            showLoading();
-            try {
-                const data = await fetchEtymology(word);
-                renderGraph(data, word);
-            } catch (err) {
-                showError(err.message);
-            }
-        }
-    });
+    currentDepth = newDepth;
+    updateDepthUI();
+
+    // Re-render with new depth (client-side, no fetch!)
+    if (fullGraphData && currentSearchedWord) {
+        renderGraph(fullGraphData, currentSearchedWord, true);
+    }
+}
+
+if (depthMinus) {
+    depthMinus.addEventListener('click', () => changeDepth(-1));
+}
+if (depthPlus) {
+    depthPlus.addEventListener('click', () => changeDepth(1));
 }
 
 // Stats toggle
