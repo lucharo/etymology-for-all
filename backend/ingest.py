@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -112,6 +113,15 @@ def main() -> None:
         """)
 
         # Language families reference table
+        # Load from language_codes.json (2400+ language code mappings)
+        # Run `python -m backend.download_language_codes` to generate this file
+        language_codes_path = DATA_DIR / "language_codes.json"
+        if not language_codes_path.exists():
+            raise FileNotFoundError(
+                f"Missing {language_codes_path}. "
+                "Run `python -m backend.download_language_codes` first."
+            )
+
         conn.execute("DROP TABLE IF EXISTS language_families")
         conn.execute("""
             CREATE TABLE language_families (
@@ -121,65 +131,19 @@ def main() -> None:
                 branch VARCHAR
             )
         """)
-        conn.execute("""
-            INSERT INTO language_families VALUES
-            -- Modern languages
-            ('en', 'English', 'Indo-European', 'Germanic'),
-            ('de', 'German', 'Indo-European', 'Germanic'),
-            ('nl', 'Dutch', 'Indo-European', 'Germanic'),
-            ('sv', 'Swedish', 'Indo-European', 'Germanic'),
-            ('da', 'Danish', 'Indo-European', 'Germanic'),
-            ('no', 'Norwegian', 'Indo-European', 'Germanic'),
-            ('is', 'Icelandic', 'Indo-European', 'Germanic'),
-            ('fr', 'French', 'Indo-European', 'Romance'),
-            ('es', 'Spanish', 'Indo-European', 'Romance'),
-            ('it', 'Italian', 'Indo-European', 'Romance'),
-            ('pt', 'Portuguese', 'Indo-European', 'Romance'),
-            ('ro', 'Romanian', 'Indo-European', 'Romance'),
-            ('la', 'Latin', 'Indo-European', 'Italic'),
-            ('grc', 'Ancient Greek', 'Indo-European', 'Hellenic'),
-            ('el', 'Modern Greek', 'Indo-European', 'Hellenic'),
-            ('ru', 'Russian', 'Indo-European', 'Slavic'),
-            ('pl', 'Polish', 'Indo-European', 'Slavic'),
-            ('cs', 'Czech', 'Indo-European', 'Slavic'),
-            ('sa', 'Sanskrit', 'Indo-European', 'Indo-Iranian'),
-            ('fa', 'Persian', 'Indo-European', 'Indo-Iranian'),
-            ('hi', 'Hindi', 'Indo-European', 'Indo-Iranian'),
-            ('ga', 'Irish', 'Indo-European', 'Celtic'),
-            ('cy', 'Welsh', 'Indo-European', 'Celtic'),
-            ('hy', 'Armenian', 'Indo-European', 'Armenian'),
-            ('sq', 'Albanian', 'Indo-European', 'Albanian'),
-            ('lt', 'Lithuanian', 'Indo-European', 'Baltic'),
-            ('lv', 'Latvian', 'Indo-European', 'Baltic'),
-            -- Historical/Proto languages
-            ('ang', 'Old English', 'Indo-European', 'Germanic'),
-            ('enm', 'Middle English', 'Indo-European', 'Germanic'),
-            ('goh', 'Old High German', 'Indo-European', 'Germanic'),
-            ('gmh', 'Middle High German', 'Indo-European', 'Germanic'),
-            ('osx', 'Old Saxon', 'Indo-European', 'Germanic'),
-            ('non', 'Old Norse', 'Indo-European', 'Germanic'),
-            ('got', 'Gothic', 'Indo-European', 'Germanic'),
-            ('gem-pro', 'Proto-Germanic', 'Indo-European', 'Germanic'),
-            ('gmw-pro', 'Proto-West-Germanic', 'Indo-European', 'Germanic'),
-            ('ine-pro', 'Proto-Indo-European', 'Indo-European', 'Proto'),
-            ('fro', 'Old French', 'Indo-European', 'Romance'),
-            ('frm', 'Middle French', 'Indo-European', 'Romance'),
-            ('VL.', 'Vulgar Latin', 'Indo-European', 'Italic'),
-            ('sla-pro', 'Proto-Slavic', 'Indo-European', 'Slavic'),
-            ('cel-pro', 'Proto-Celtic', 'Indo-European', 'Celtic'),
-            ('grk-pro', 'Proto-Greek', 'Indo-European', 'Hellenic'),
-            ('iir-pro', 'Proto-Indo-Iranian', 'Indo-European', 'Indo-Iranian'),
-            -- Non-Indo-European
-            ('ar', 'Arabic', 'Afro-Asiatic', 'Semitic'),
-            ('he', 'Hebrew', 'Afro-Asiatic', 'Semitic'),
-            ('fi', 'Finnish', 'Uralic', 'Finnic'),
-            ('hu', 'Hungarian', 'Uralic', 'Ugric'),
-            ('tr', 'Turkish', 'Turkic', 'Oghuz'),
-            ('ja', 'Japanese', 'Japonic', 'Japanese'),
-            ('ko', 'Korean', 'Koreanic', 'Korean'),
-            ('zh', 'Chinese', 'Sino-Tibetan', 'Sinitic'),
-            ('vi', 'Vietnamese', 'Austroasiatic', 'Vietic')
-        """)
+
+        with open(language_codes_path, encoding="utf-8") as f:
+            language_data = json.load(f)
+        for entry in language_data:
+            conn.execute(
+                "INSERT INTO language_families VALUES (?, ?, ?, ?)",
+                [
+                    entry["code"],
+                    entry["name"],
+                    entry.get("family"),
+                    entry.get("branch"),
+                ],
+            )
 
         # ============================================================
         # Definition Enrichment Tables

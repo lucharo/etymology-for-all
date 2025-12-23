@@ -2,40 +2,11 @@
  * Utility functions for Etymology Explorer
  */
 
-// Human-readable language names (fallback when not provided by API)
-export const LANG_NAMES = {
-    en: 'English',
-    fr: 'French',
-    de: 'German',
-    es: 'Spanish',
-    it: 'Italian',
-    pt: 'Portuguese',
-    nl: 'Dutch',
-    la: 'Latin',
-    lat: 'Latin',
-    grc: 'Ancient Greek',
-    'ancient-greek': 'Ancient Greek',
-    el: 'Greek',
-    'proto-germanic': 'Proto-Germanic',
-    'proto-indo-european': 'Proto-Indo-European',
-    'old-english': 'Old English',
-    'middle-english': 'Middle English',
-    'old-french': 'Old French',
-    'middle-french': 'Middle French',
-    'old-high-german': 'Old High German',
-    'old-norse': 'Old Norse',
-    ar: 'Arabic',
-    he: 'Hebrew',
-    ang: 'Old English',
-    enm: 'Middle English',
-    gem: 'Proto-Germanic',
-    ine: 'Proto-Indo-European',
-};
-
 export function getLangName(lang) {
+    // API provides lang_name from 2400+ code database
+    // This is only called as fallback when API doesn't return lang_name
     if (!lang) return 'Unknown';
-    const normalized = lang.toLowerCase().replace(/_/g, '-');
-    return LANG_NAMES[normalized] || lang;
+    return lang;  // Return raw code if no name available
 }
 
 export function truncate(text, maxLength) {
@@ -62,5 +33,6 @@ export async function handleApiResponse(response, context = 'request') {
 export function buildNodeLabel(node) {
     const langName = node.lang_name || getLangName(node.lang);
     const displayWord = node.lexeme || node.id;
+    // Keep nodes clean: just word + language name
     return displayWord + '\n(' + langName.toLowerCase() + ')';
 }

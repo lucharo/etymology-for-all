@@ -87,7 +87,7 @@ export function updateStats(nodeCount, edgeCount, langCount, depth, elements) {
 }
 
 // Language breakdown
-export function updateInfoSummary(langCounts, langBreakdown) {
+export function updateInfoSummary(langCounts, langCodes, langBreakdown) {
     if (!langBreakdown) return;
 
     const sorted = Array.from(langCounts.entries()).sort((a, b) => {
@@ -96,12 +96,16 @@ export function updateInfoSummary(langCounts, langBreakdown) {
     });
 
     langBreakdown.innerHTML = sorted
-        .map(([langName, count]) => `
-            <span class="lang-chip">
+        .map(([langName, count]) => {
+            const code = langCodes.get(langName) || '';
+            // Show code in tooltip on hover, keep UI clean
+            return `
+            <span class="lang-chip" title="${code}">
                 <span class="lang-chip-name">${langName}</span>
                 <span class="lang-chip-count">${count}</span>
             </span>
-        `)
+        `;
+        })
         .join('');
 }
 
