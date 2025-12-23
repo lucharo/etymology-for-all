@@ -2,23 +2,11 @@
  * Utility functions for Etymology Explorer
  */
 
-// Fallback language names (API provides names from 2400+ code database)
-// This is only used when API doesn't return lang_name
-export const LANG_NAMES = {
-    en: 'English',
-    la: 'Latin',
-    grc: 'Ancient Greek',
-    ang: 'Old English',
-    enm: 'Middle English',
-    fro: 'Old French',
-    'gem-pro': 'Proto-Germanic',
-    'ine-pro': 'Proto-Indo-European',
-};
-
 export function getLangName(lang) {
+    // API provides lang_name from 2400+ code database
+    // This is only called as fallback when API doesn't return lang_name
     if (!lang) return 'Unknown';
-    const normalized = lang.toLowerCase().replace(/_/g, '-');
-    return LANG_NAMES[normalized] || lang;
+    return lang;  // Return raw code if no name available
 }
 
 export function truncate(text, maxLength) {

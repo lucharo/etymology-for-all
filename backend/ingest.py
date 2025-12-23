@@ -114,6 +114,14 @@ def main() -> None:
 
         # Language families reference table
         # Load from language_codes.json (2400+ language code mappings)
+        # Run `python -m backend.download_language_codes` to generate this file
+        language_codes_path = DATA_DIR / "language_codes.json"
+        if not language_codes_path.exists():
+            raise FileNotFoundError(
+                f"Missing {language_codes_path}. "
+                "Run `python -m backend.download_language_codes` first."
+            )
+
         conn.execute("DROP TABLE IF EXISTS language_families")
         conn.execute("""
             CREATE TABLE language_families (
@@ -124,33 +132,18 @@ def main() -> None:
             )
         """)
 
-        language_codes_path = DATA_DIR / "language_codes.json"
-        if language_codes_path.exists():
-            with open(language_codes_path, encoding="utf-8") as f:
-                language_data = json.load(f)
-            for entry in language_data:
-                conn.execute(
-                    "INSERT INTO language_families VALUES (?, ?, ?, ?)",
-                    [
-                        entry["code"],
-                        entry["name"],
-                        entry.get("family"),
-                        entry.get("branch"),
-                    ],
-                )
-        else:
-            # Fallback: minimal set of common languages
-            conn.execute("""
-                INSERT INTO language_families VALUES
-                ('en', 'English', 'Indo-European', 'Germanic'),
-                ('la', 'Latin', 'Indo-European', 'Italic'),
-                ('grc', 'Ancient Greek', 'Indo-European', 'Hellenic'),
-                ('fr', 'French', 'Indo-European', 'Romance'),
-                ('de', 'German', 'Indo-European', 'Germanic'),
-                ('ang', 'Old English', 'Indo-European', 'Germanic'),
-                ('gem-pro', 'Proto-Germanic', 'Indo-European', 'Proto-Germanic'),
-                ('ine-pro', 'Proto-Indo-European', 'Indo-European', 'Proto')
-            """)
+        with open(language_codes_path, encoding="utf-8") as f:
+            language_data = json.load(f)
+        for entry in language_data:
+            conn.execute(
+                "INSERT INTO language_families VALUES (?, ?, ?, ?)",
+                [
+                    entry["code"],
+                    entry["name"],
+                    entry.get("family"),
+                    entry.get("branch"),
+                ],
+            )
 
         # ============================================================
         # Definition Enrichment Tables
