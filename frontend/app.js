@@ -355,7 +355,7 @@ async function fetchRandomWord() {
 }
 
 // Build and render graph (with optional depth filtering)
-function renderGraph(data, searchedWord, filterByDepth = true, animate = true) {
+function renderGraph(data, searchedWord, filterByDepth = true) {
     if (!data.nodes || data.nodes.length === 0) {
         showError('No etymology data available for this word');
         return;
@@ -424,7 +424,7 @@ function renderGraph(data, searchedWord, filterByDepth = true, animate = true) {
     cy.elements().remove();
     cy.add(elements);
 
-    // Apply dagre layout (responsive direction)
+    // Apply dagre layout (responsive direction, no animation)
     const direction = getLayoutDirection();
     cy.layout({
         name: 'dagre',
@@ -432,19 +432,11 @@ function renderGraph(data, searchedWord, filterByDepth = true, animate = true) {
         nodeSep: direction === 'LR' ? 40 : 30,
         rankSep: direction === 'LR' ? 80 : 60,
         padding: 30,
-        animate: animate,
-        animationDuration: animate ? 500 : 0,
-        animationEasing: 'ease-out',
+        animate: false,
     }).run();
 
-    // Fit to viewport (skip animation if not animating)
-    if (animate) {
-        setTimeout(() => {
-            cy.fit(undefined, 40);
-        }, 550);
-    } else {
-        cy.fit(undefined, 40);
-    }
+    // Fit to viewport
+    cy.fit(undefined, 40);
 
     // Update direction indicator
     if (directionIndicator) {
@@ -465,12 +457,11 @@ function renderGraph(data, searchedWord, filterByDepth = true, animate = true) {
     showGraph();
 
     // Update stats after layout completes
-    const statsDelay = animate ? 600 : 50;
     setTimeout(() => {
         const graphDepth = calculateGraphDepth(cy, searchedWord);
         const roots = findRootAncestors(cy);
         updateStats(displayData.nodes.length, displayData.edges.length, langCounts.size, graphDepth, roots);
-    }, statsDelay);
+    }, 50);
 }
 
 // Calculate graph depth using BFS from the searched word
@@ -686,9 +677,9 @@ function changeDepth(delta) {
     currentDepth = newDepth;
     updateDepthUI();
 
-    // Re-render with new depth (client-side, no fetch, no animation!)
+    // Re-render with new depth (client-side, no fetch)
     if (fullGraphData && currentSearchedWord) {
-        renderGraph(fullGraphData, currentSearchedWord, true, false);
+        renderGraph(fullGraphData, currentSearchedWord, true);
     }
 }
 
