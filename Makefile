@@ -20,7 +20,7 @@ hf-deploy:
 	cp Dockerfile README.md pyproject.toml uv.lock $(HF_REPO)/
 	mkdir -p $(HF_REPO)/backend $(HF_REPO)/frontend $(HF_REPO)/cloudflare-worker
 	cp backend/*.py $(HF_REPO)/backend/
-	cp frontend/* $(HF_REPO)/frontend/
+	cp -r frontend/* $(HF_REPO)/frontend/
 	cp cloudflare-worker/* $(HF_REPO)/cloudflare-worker/
 	cd $(HF_REPO) && git add -A && git diff --cached --quiet || git commit -m "Deploy from local" && git push
 	uv run hf upload $(HF_SPACE) backend/data/etymdb.duckdb backend/data/etymdb.duckdb --repo-type space
