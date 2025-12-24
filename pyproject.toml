@@ -24,6 +24,7 @@ dev = [
     "prek>=0.2.22",
     "pytest>=8.4.2",
     "ruff>=0.8.0",
+    "sqlfluff>=3.0.0",
 ]
 
 [tool.ruff]

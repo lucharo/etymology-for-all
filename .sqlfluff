@@ -1,0 +1,28 @@
+[sqlfluff]
+dialect = duckdb
+templater = placeholder
+max_line_length = 100
+indent_unit = space
+# Relax rules for DuckDB-specific syntax patterns
+exclude_rules = AM04, AM05, AL01, LT01, LT02
+
+[sqlfluff:templater:placeholder]
+param_regex = \$[a-z_]+
+
+[sqlfluff:indentation]
+indent_unit = space
+tab_space_size = 4
+
+# Disable strict rules for initial setup
+# Can be enabled later as SQL is cleaned up
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = consistent
+
+[sqlfluff:rules:capitalisation.functions]
+capitalisation_policy = consistent
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = consistent
+
+[sqlfluff:rules:layout.long_lines]
+ignore_comment_lines = True

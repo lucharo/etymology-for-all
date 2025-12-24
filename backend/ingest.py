@@ -21,6 +21,8 @@ DB_PATH = Path(os.environ.get("ETYM_DB_PATH", DEFAULT_DB_PATH))
 VALUES_CSV = Path(os.environ.get("ETYM_VALUES_CSV", DEFAULT_VALUES))
 LINKS_CSV = Path(os.environ.get("ETYM_LINKS_CSV", DEFAULT_LINKS))
 
+SQL_DIR = Path(__file__).parent / "sql"
+
 
 def _ensure_csvs() -> None:
     if VALUES_CSV.exists() and LINKS_CSV.exists():
@@ -30,6 +32,39 @@ def _ensure_csvs() -> None:
         raise FileNotFoundError("Failed to download required CSV files")
 
 
+def execute_sql_file(conn: duckdb.DuckDBPyConnection, filename: str, **params) -> None:
+    """Execute a SQL file with optional parameters."""
+    sql = (SQL_DIR / filename).read_text()
+    if params:
+        conn.execute(sql, params)
+    else:
+        conn.execute(sql)
+
+
+def load_language_families(conn: duckdb.DuckDBPyConnection) -> None:
+    """Load language families from JSON into the database."""
+    language_codes_path = DATA_DIR / "language_codes.json"
+    if not language_codes_path.exists():
+        raise FileNotFoundError(
+            f"Missing {language_codes_path}. "
+            "Run `python -m backend.download_language_codes` first."
+        )
+
+    with open(language_codes_path, encoding="utf-8") as f:
+        language_data = json.load(f)
+
+    for entry in language_data:
+        conn.execute(
+            "INSERT INTO language_families VALUES (?, ?, ?, ?)",
+            [
+                entry["code"],
+                entry["name"],
+                entry.get("family"),
+                entry.get("branch"),
+            ],
+        )
+
+
 def main() -> None:
     """Create or refresh the DuckDB database from the CSV files."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -37,128 +72,28 @@ def main() -> None:
     _ensure_csvs()
 
     with duckdb.connect(DB_PATH.as_posix()) as conn:
+        # Drop existing tables
         conn.execute("DROP TABLE IF EXISTS words")
         conn.execute("DROP TABLE IF EXISTS links")
-
-        conn.execute(
-            """
-            CREATE TABLE words AS
-            SELECT
-                word_ix::BIGINT AS word_ix,
-                lang,
-                lexeme,
-                sense
-            FROM read_csv_auto(?, delim='\t', header=false, columns={
-                'word_ix': 'BIGINT',
-                'lang': 'VARCHAR',
-                'dummy': 'INTEGER',
-                'lexeme': 'VARCHAR',
-                'sense': 'VARCHAR'
-            })
-            """,
-            [VALUES_CSV.as_posix()],
-        )
-
-        conn.execute(
-            """
-            CREATE TABLE links AS
-            SELECT
-                type,
-                source::BIGINT AS source,
-                target::BIGINT AS target
-            FROM read_csv_auto(?, delim='\t', header=false, columns={
-                'type': 'VARCHAR',
-                'source': 'BIGINT',
-                'target': 'BIGINT'
-            })
-            """,
-            [LINKS_CSV.as_posix()],
-        )
-
-        conn.execute("CREATE INDEX idx_words_word_ix ON words(word_ix)")
-        conn.execute("CREATE INDEX idx_words_lexeme ON words(lexeme)")
-        conn.execute("CREATE INDEX idx_links_source ON links(source)")
-        conn.execute("CREATE INDEX idx_links_target ON links(target)")
-
-        # ============================================================
-        # Gold Layer: Macros, Views, and Reference Tables
-        # ============================================================
-
-        # Macros for reusable filtering conditions
-        conn.execute("""
-            CREATE OR REPLACE MACRO is_phrase(lexeme) AS
-                lexeme LIKE '% %'
-        """)
-        conn.execute("""
-            CREATE OR REPLACE MACRO is_proper_noun(lexeme) AS
-                regexp_matches(lexeme, '^[A-Z][a-z]')
-        """)
-        conn.execute("""
-            CREATE OR REPLACE MACRO is_clean_word(lexeme) AS
-                NOT is_phrase(lexeme) AND NOT is_proper_noun(lexeme)
-        """)
-        conn.execute("""
-            CREATE OR REPLACE MACRO has_etymology(word_ix) AS
-                word_ix IN (SELECT DISTINCT source FROM links)
-        """)
-
-        # Curated view: English words with etymology, no phrases/proper nouns
-        conn.execute("""
-            CREATE OR REPLACE VIEW v_english_curated AS
-            SELECT DISTINCT w.*
-            FROM words w
-            JOIN links l ON w.word_ix = l.source
-            WHERE w.lang = 'en'
-              AND is_clean_word(w.lexeme)
-        """)
-
-        # Language families reference table
-        # Load from language_codes.json (2400+ language code mappings)
-        # Run `python -m backend.download_language_codes` to generate this file
-        language_codes_path = DATA_DIR / "language_codes.json"
-        if not language_codes_path.exists():
-            raise FileNotFoundError(
-                f"Missing {language_codes_path}. "
-                "Run `python -m backend.download_language_codes` first."
-            )
-
         conn.execute("DROP TABLE IF EXISTS language_families")
-        conn.execute("""
-            CREATE TABLE language_families (
-                lang_code VARCHAR PRIMARY KEY,
-                lang_name VARCHAR,
-                family VARCHAR,
-                branch VARCHAR
-            )
-        """)
 
-        with open(language_codes_path, encoding="utf-8") as f:
-            language_data = json.load(f)
-        for entry in language_data:
-            conn.execute(
-                "INSERT INTO language_families VALUES (?, ?, ?, ?)",
-                [
-                    entry["code"],
-                    entry["name"],
-                    entry.get("family"),
-                    entry.get("branch"),
-                ],
-            )
+        # Create base tables from CSVs
+        execute_sql_file(conn, "01_create_words.sql", csv_path=VALUES_CSV.as_posix())
+        execute_sql_file(conn, "02_create_links.sql", csv_path=LINKS_CSV.as_posix())
 
-        # ============================================================
-        # Definition Enrichment Tables
-        # ============================================================
+        # Create indexes
+        execute_sql_file(conn, "03_create_indexes.sql")
 
-        # Table to store raw API responses from Free Dictionary API
-        # After enrichment, run --materialize to create the `definitions` table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS definitions_raw (
-                lexeme VARCHAR PRIMARY KEY,
-                api_response JSON,
-                fetched_at TIMESTAMP,
-                status VARCHAR
-            )
-        """)
+        # Create macros and views
+        execute_sql_file(conn, "04_create_macros.sql")
+        execute_sql_file(conn, "05_create_views.sql")
+
+        # Create and populate language families
+        execute_sql_file(conn, "06_create_language_families.sql")
+        load_language_families(conn)
+
+        # Create definitions table (for enrichment)
+        execute_sql_file(conn, "07_create_definitions_raw.sql")
 
 
 if __name__ == "__main__":  # pragma: no cover - manual utility
