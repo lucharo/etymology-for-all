@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=31">
+    <link rel="stylesheet" href="styles.css?v=32">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
@@ -72,6 +72,28 @@
 
         <!-- Graph options -->
         <div id="graph-options" class="graph-options hidden">
+            <div class="view-toggle">
+                <button id="view-graph" class="view-btn active" title="Graph view">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <circle cx="19" cy="5" r="2"></circle>
+                        <circle cx="5" cy="19" r="2"></circle>
+                        <circle cx="5" cy="5" r="2"></circle>
+                        <line x1="12" y1="9" x2="12" y2="5"></line>
+                        <line x1="6.5" y1="17.5" x2="9.5" y2="14.5"></line>
+                        <line x1="17.5" y1="6.5" x2="14.5" y2="9.5"></line>
+                    </svg>
+                    Graph
+                </button>
+                <button id="view-tree" class="view-btn" title="Tree view">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3v18"></path>
+                        <path d="M5 8h14"></path>
+                        <path d="M5 16h14"></path>
+                    </svg>
+                    Tree
+                </button>
+            </div>
             <div class="depth-control">
                 <span class="depth-label">Depth:</span>
                 <button id="depth-minus" class="depth-btn" title="Decrease depth">−</button>
@@ -108,6 +130,9 @@
                 <p id="error-message"></p>
             </div>
             <div id="cy"></div>
+
+            <!-- Tree view (alternative to graph) -->
+            <div id="tree-view" class="tree-view hidden"></div>
 
             <!-- Direction indicator -->
             <div id="direction-indicator" class="hidden">
@@ -314,6 +339,6 @@
         <p>Built by <a href="https://github.com/lucharo" target="_blank" rel="noopener">@lucharo</a> · <a href="https://github.com/lucharo/etymology-for-all" target="_blank" rel="noopener">Source code</a></p>
     </footer>
 
-    <script type="module" src="js/app.js?v=1"></script>
+    <script type="module" src="js/app.js?v=2"></script>
 </body>
 </html>

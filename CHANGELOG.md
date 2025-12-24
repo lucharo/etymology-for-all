@@ -4,6 +4,27 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.9.1 - Tree View (2024-12-24)
+
+### New Feature
+- **Tree view** alternative to graph visualization
+- Toggle between Graph and Tree views with buttons
+- Unicode box-drawing characters for tree structure
+- Click any node in tree to see definition panel
+
+### How It Works
+Tree view shows etymology as a text-based hierarchy:
+```
+friend (English)
+└── frēond (Old English)
+    └── frijōndz (Proto-Germanic)
+```
+
+### Files Added
+- `frontend/js/tree.js` - Tree building and rendering module
+
+---
+
 ## v0.9.0 - Language Name Mappings (2024-12-23)
 
 ### Language Display
