@@ -4,11 +4,13 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
-## v0.9.1 - CI: Changelog Check (2024-12-24)
+## v0.11.0 - Bug Fixes and Improvements (2025-12-25)
 
-### Developer Experience
-- **PR changelog check** - GitHub Action verifies CHANGELOG.md is updated in pull requests
-- Add `skip-changelog` label to bypass for non-user-facing changes (docs, CI, etc.)
+Small bug fixes and improvements to backend, UI, and documentation.
+
+### Documentation
+- **PR changelog check** - GitHub Action verifies CHANGELOG.md is updated in PRs
+- Add `skip-changelog` label to bypass for non-user-facing changes
 
 ---
 
