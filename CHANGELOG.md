@@ -19,6 +19,7 @@ Small bug fixes and improvements to backend, UI, and documentation.
   - Toggle between Graph and Tree views with buttons
   - Unicode box-drawing characters for tree structure
   - Click any node in tree to see definition panel
+- **Dice icon** for random button (replaces abstract cube for better clarity)
 
 ### Documentation
 - **PR changelog check** - GitHub Action verifies CHANGELOG.md is updated in PRs
