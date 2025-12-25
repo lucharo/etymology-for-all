@@ -16,17 +16,20 @@ except ImportError:  # pragma: no cover - fallback for direct execution
 DEFAULT_DB_PATH = DATA_DIR / "etymdb.duckdb"
 DEFAULT_VALUES = DATA_DIR / "etymdb_values.csv"
 DEFAULT_LINKS = DATA_DIR / "etymdb_links_info.csv"
+DEFAULT_LINKS_INDEX = DATA_DIR / "etymdb_links_index.csv"
 
 DB_PATH = Path(os.environ.get("ETYM_DB_PATH", DEFAULT_DB_PATH))
 VALUES_CSV = Path(os.environ.get("ETYM_VALUES_CSV", DEFAULT_VALUES))
 LINKS_CSV = Path(os.environ.get("ETYM_LINKS_CSV", DEFAULT_LINKS))
+LINKS_INDEX_CSV = Path(os.environ.get("ETYM_LINKS_INDEX_CSV", DEFAULT_LINKS_INDEX))
 
 
 def _ensure_csvs() -> None:
-    if VALUES_CSV.exists() and LINKS_CSV.exists():
+    required = [VALUES_CSV, LINKS_CSV, LINKS_INDEX_CSV]
+    if all(f.exists() for f in required):
         return
     download()
-    if not (VALUES_CSV.exists() and LINKS_CSV.exists()):  # pragma: no cover - defensive
+    if not all(f.exists() for f in required):  # pragma: no cover - defensive
         raise FileNotFoundError("Failed to download required CSV files")
 
 
@@ -39,6 +42,7 @@ def main() -> None:
     with duckdb.connect(DB_PATH.as_posix()) as conn:
         conn.execute("DROP TABLE IF EXISTS words")
         conn.execute("DROP TABLE IF EXISTS links")
+        conn.execute("DROP TABLE IF EXISTS sequences")
 
         conn.execute(
             """
@@ -75,10 +79,36 @@ def main() -> None:
             [LINKS_CSV.as_posix()],
         )
 
+        # Lexeme sequences table: maps negative IDs to compound etymologies
+        # Each sequence links a negative ID to one or more parent words
+        # Some compounds have 3+ components, so we normalize to (seq_ix, position, parent_ix)
+        conn.execute("""
+            CREATE TABLE sequences (
+                seq_ix BIGINT,
+                position INT,
+                parent_ix BIGINT
+            )
+        """)
+
+        # Parse and insert sequences (handles variable-length rows)
+        with open(LINKS_INDEX_CSV, encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split("\t")
+                if len(parts) < 2:
+                    continue
+                seq_ix = int(parts[0])
+                for position, parent in enumerate(parts[1:]):
+                    if parent:
+                        conn.execute(
+                            "INSERT INTO sequences VALUES (?, ?, ?)",
+                            [seq_ix, position, int(parent)],
+                        )
+
         conn.execute("CREATE INDEX idx_words_word_ix ON words(word_ix)")
         conn.execute("CREATE INDEX idx_words_lexeme ON words(lexeme)")
         conn.execute("CREATE INDEX idx_links_source ON links(source)")
         conn.execute("CREATE INDEX idx_links_target ON links(target)")
+        conn.execute("CREATE INDEX idx_sequences_seq_ix ON sequences(seq_ix)")
 
         # ============================================================
         # Gold Layer: Macros, Views, and Reference Tables
@@ -103,6 +133,9 @@ def main() -> None:
         """)
 
         # Curated view: English words with etymology, no phrases/proper nouns
+        # Filter out sense=NULL entries which are often garbage (e.g., suffix entries
+        # like "-er" with corrupted links to unrelated words like "asteroid belt")
+        # Paper notes 40% of EtymDB lacks glosses; our curated set is 99% with sense
         conn.execute("""
             CREATE OR REPLACE VIEW v_english_curated AS
             SELECT DISTINCT w.*
@@ -110,6 +143,21 @@ def main() -> None:
             JOIN links l ON w.word_ix = l.source
             WHERE w.lang = 'en'
               AND is_clean_word(w.lexeme)
+              AND w.sense IS NOT NULL
+        """)
+
+        # View for words with "deep" etymology (at least one link to a real word)
+        # Excludes compound-only words where all links point to sequences (negative IDs)
+        # Also excludes sense=NULL entries (same rationale as v_english_curated)
+        conn.execute("""
+            CREATE OR REPLACE VIEW v_english_deep AS
+            SELECT DISTINCT w.*
+            FROM words w
+            JOIN links l ON w.word_ix = l.source
+            WHERE w.lang = 'en'
+              AND is_clean_word(w.lexeme)
+              AND w.sense IS NOT NULL
+              AND l.target > 0
         """)
 
         # Language families reference table

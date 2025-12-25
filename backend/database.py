@@ -186,17 +186,38 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
         seen_edges: set[tuple[str, str]] = set()
 
         if depth > 0:
+            # Recursive traversal that handles both simple links and compound etymologies
+            # When target < 0, it's a sequence ID that resolves to multiple parent words
+            # Track is_compound to style compound edges differently in the UI
             records = conn.execute(
                 """
-                WITH RECURSIVE traversal(child_ix, parent_ix, lvl) AS (
-                    SELECT source, target, 1
+                WITH RECURSIVE
+                -- Resolve negative targets through sequences table
+                resolved_links AS (
+                    -- Simple links (positive target = direct word reference)
+                    SELECT source, target AS parent_ix, FALSE AS is_compound
                     FROM links
+                    WHERE target > 0
+                    UNION ALL
+                    -- Compound links (negative target = sequence, resolve to parents)
+                    SELECT l.source, s.parent_ix, TRUE AS is_compound
+                    FROM links l
+                    JOIN sequences s ON s.seq_ix = l.target
+                    WHERE l.target < 0
+                ),
+                traversal(child_ix, parent_ix, is_compound, lvl) AS (
+                    SELECT source, parent_ix, is_compound, 1
+                    FROM resolved_links
                     WHERE source = ?
                     UNION ALL
-                    SELECT l.source, l.target, lvl + 1
+                    -- Only follow FROM parents that have valid sense (non-NULL for English)
+                    -- This keeps sense=NULL entries as nodes but doesn't traverse their garbage links
+                    SELECT rl.source, rl.parent_ix, rl.is_compound, lvl + 1
                     FROM traversal t
-                    JOIN links l ON l.source = t.parent_ix
+                    JOIN resolved_links rl ON rl.source = t.parent_ix
+                    JOIN words parent_word ON parent_word.word_ix = t.parent_ix
                     WHERE lvl < ?
+                      AND (parent_word.lang != 'en' OR parent_word.sense IS NOT NULL)
                 )
                 SELECT
                     child.word_ix AS child_ix,
@@ -206,7 +227,8 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
                     parent.word_ix AS parent_ix,
                     parent.lexeme AS parent_lexeme,
                     parent.lang AS parent_lang,
-                    parent.sense AS parent_sense
+                    parent.sense AS parent_sense,
+                    tr.is_compound
                 FROM traversal tr
                 JOIN words child ON child.word_ix = tr.child_ix
                 JOIN words parent ON parent.word_ix = tr.parent_ix
@@ -216,19 +238,23 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
 
             for row in records:
                 child_ix, child_lexeme, child_lang, child_sense = row[:4]
-                parent_ix, parent_lexeme, parent_lang, parent_sense = row[4:]
+                parent_ix, parent_lexeme, parent_lang, parent_sense = row[4:8]
+                is_compound = row[8]
 
                 raw_nodes.setdefault(child_ix, (child_lexeme, child_lang, child_sense))
                 raw_nodes.setdefault(parent_ix, (parent_lexeme, parent_lang, parent_sense))
 
-                # Build edges
+                # Build edges with compound flag for UI styling
                 child_id = _make_node_id(child_lexeme, child_lang)
                 parent_id = _make_node_id(parent_lexeme, parent_lang)
                 if child_id != parent_id:
                     edge_key = (child_id, parent_id)
                     if edge_key not in seen_edges:
                         seen_edges.add(edge_key)
-                        edges.append({"source": child_id, "target": parent_id})
+                        edge = {"source": child_id, "target": parent_id}
+                        if is_compound:
+                            edge["compound"] = True
+                        edges.append(edge)
 
         # Fetch definitions only for English lexemes in this graph
         english_lexemes = [lex for lex, lang, _ in raw_nodes.values() if lang == "en"]
@@ -247,12 +273,16 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
         return {"nodes": list(nodes.values()), "edges": edges}
 
 
-def fetch_random_word() -> dict[str, str | None]:
-    """Return a random curated English word (has etymology, no phrases/proper nouns)."""
+def fetch_random_word(include_compound: bool = True) -> dict[str, str | None]:
+    """Return a random curated English word (has etymology, no phrases/proper nouns).
+
+    Args:
+        include_compound: If True, include compound-only words (e.g., "acquaintanceship").
+                         If False, only return words with "deep" etymology chains.
+    """
+    view = "v_english_curated" if include_compound else "v_english_deep"
     with _ConnectionManager() as conn:
-        row = conn.execute(
-            "SELECT lexeme FROM v_english_curated ORDER BY random() LIMIT 1"
-        ).fetchone()
+        row = conn.execute(f"SELECT lexeme FROM {view} ORDER BY random() LIMIT 1").fetchone()
         return {"word": row[0] if row else None}
 
 

@@ -4,6 +4,95 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.10.0 - Compound Etymology Support (2024-12-25) 🎄
+
+### Critical Discovery: "Broken Links" Were Compound Etymologies!
+
+In v0.4.1, we documented "80,921 broken links pointing to non-existent word entries (negative `word_ix`)". **This was wrong!** After reading the [EtymDB 2.0 academic paper](https://aclanthology.org/2020.lrec-1.392/), we discovered:
+
+- **Negative IDs are lexeme sequences** - references to compound etymologies involving multiple source words
+- **80,265 lexeme sequences** exist in EtymDB for words derived from 2+ parent words
+- Example: "encyclopedia" comes from Greek ἐγκύκλιος (enkyklios) + παιδείᾱ (paideia)
+- Example: "memoriousness" = "memorious" + "-ness"
+
+These aren't broken data - they're **rich compound etymologies** we weren't loading!
+
+### Fixes
+
+- **Added `etymdb_links_index.csv`** - third data file mapping sequence IDs to parent words
+- **New `sequences` table** in DuckDB with normalized structure:
+  - `seq_ix`: Negative sequence ID (e.g., -1, -2)
+  - `position`: Order of parent (0 = first, 1 = second, etc.)
+  - `parent_ix`: Positive word ID of parent word
+- **Updated etymology traversal** to resolve negative targets through sequences
+- **165,093 sequence entries** now properly loaded (80K sequences × ~2 parents each)
+
+### Data Pipeline Changes
+
+| File | Records | Purpose |
+|------|---------|---------|
+| `etymdb_values.csv` | 1.9M | Words (id, lang, lexeme, sense) |
+| `etymdb_links_info.csv` | 700K | Etymology links (type, source, target) |
+| `etymdb_links_index.csv` | 80K | **NEW**: Sequence definitions (seq_id → parents) |
+
+### Data Quality: Filter sense=NULL Entries
+
+The EtymDB paper notes that 40% of lexemes lack glosses/senses. We discovered that `sense=NULL` entries in English often have **corrupted etymology links**:
+
+- **Problem**: Suffix entries like `-er`, `-al`, `-ic` with NULL sense had garbage links to unrelated words like "asteroid belt", "scouse", "lexical"
+- **Root cause**: These are structural entries extracted from etymology sections without proper definitions
+- **Solution**: Filter out `sense IS NULL` from curated views
+- **Impact**: Removes only 483 entries (1% of curated words)
+
+The legitimate suffix entries (e.g., `-er` with sense "agency forming") have proper senses but no etymology links anyway, so filtering NULL senses removes only garbage data.
+
+### Word Statistics
+
+| Etymology Type | Count | Percentage |
+|----------------|-------|------------|
+| Deep etymology (positive targets) | ~40,000 | 80.9% |
+| Compound-only (negative targets) | ~9,000 | 18.2% |
+| Mixed (both) | ~470 | 0.9% |
+| **Total curated words** | **49,474** | 100% |
+
+*Note: 483 sense=NULL entries filtered out for data quality.*
+
+### UI Feature: Compound Filter
+
+Added "Include compounds" checkbox to control random word selection:
+- **Checked (default)**: All 49,474 curated words
+- **Unchecked**: Only ~40,000 words with deep etymology chains
+
+This lets users focus on words with richer etymology trees if desired.
+
+### UI Feature: Compound Edge Visualization
+
+Compound etymology edges now display in a distinct color:
+- **Regular etymology edges**: Gray (`#d6d3d1`)
+- **Compound etymology edges**: Blue (`#0c4a6e` / `var(--accent)`)
+
+Added graph legend showing:
+- Direction indicator (Recent → Ancient)
+- Edge type legend (Etymology vs Compound)
+
+### Impact
+
+Words with compound etymologies now show their full ancestry instead of 404 errors. This significantly improves the random word feature and graph completeness.
+
+### Files Modified
+- `backend/download_data.py` - Downloads third CSV file
+- `backend/ingest.py` - Creates normalized sequences table + `v_english_deep` view
+- `backend/database.py` - Resolves compound etymologies in graph traversal; tracks `is_compound` edge flag
+- `backend/main.py` - Added `include_compound` query parameter to `/random`
+- `backend/tests/test_api.py` - Added sequences table, deep view, and regression test for garbage link filtering
+- `frontend/index.html` - Added "Include compounds" checkbox; added graph legend with edge types
+- `frontend/js/app.js` - Wires checkbox to random word fetch; passes legend to graph renderer
+- `frontend/js/graph.js` - Added compound edge styling (`edge[compound]`); accepts legend parameter
+- `frontend/js/search.js` - Accepts `includeCompound` parameter
+- `frontend/styles.css` - Checkbox styling; legend styling
+
+---
+
 ## v0.9.0 - Language Name Mappings (2024-12-23)
 
 ### Language Display

@@ -8,6 +8,7 @@ import {
     initCytoscape,
     getCy,
     filterGraphByDepth,
+    filterCompoundEdges,
     calculateMaxGraphDepth,
     calculateGraphDepth,
     renderGraphElements,
@@ -38,6 +39,7 @@ const elements = {
     wordInput: document.getElementById('word-input'),
     searchBtn: document.getElementById('search-btn'),
     randomBtn: document.getElementById('random-btn'),
+    includeCompound: document.getElementById('include-compound'),
     graphContainer: document.getElementById('graph-container'),
     cyContainer: document.getElementById('cy'),
     loadingEl: document.getElementById('loading'),
@@ -54,6 +56,7 @@ const elements = {
     detailSense: document.getElementById('detail-sense'),
     detailClose: document.getElementById('detail-close'),
     suggestions: document.getElementById('suggestions'),
+    graphLegend: document.getElementById('graph-legend'),
     directionIndicator: document.getElementById('direction-indicator'),
     depthMinus: document.getElementById('depth-minus'),
     depthPlus: document.getElementById('depth-plus'),
@@ -97,16 +100,19 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
         currentDepth = graphMaxDepth;
     }
 
-    const displayData = filterByDepth
+    // Apply filters: depth first, then compound
+    const includeCompound = elements.includeCompound?.checked ?? true;
+    let displayData = filterByDepth
         ? filterGraphByDepth(fullGraphData, currentDepth, searchedWord)
         : data;
+    displayData = filterCompoundEdges(displayData, includeCompound, searchedWord);
 
     if (elements.graphOptions) elements.graphOptions.classList.remove('hidden');
     updateDepthUI(currentDepth, graphMaxDepth, elements);
 
     hideNodeDetail(elements.nodeDetail);
 
-    const { seenLangs, langCounts, langCodes } = renderGraphElements(displayData, elements.directionIndicator);
+    const { seenLangs, langCounts, langCodes } = renderGraphElements(displayData, elements.graphLegend, elements.directionIndicator);
 
     elements.currentWord.textContent = searchedWord;
     updateInfoSummary(langCounts, langCodes, elements.langBreakdown);
@@ -139,7 +145,8 @@ async function handleRandom() {
     showLoading(elements);
 
     try {
-        const word = await fetchRandomWord();
+        const includeCompound = elements.includeCompound?.checked ?? true;
+        const word = await fetchRandomWord(includeCompound);
         if (!word) {
             showError('Could not get a random word', elements, minimizeGraph);
             return;
@@ -208,6 +215,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (elements.depthPlus) {
         elements.depthPlus.addEventListener('click', () => changeDepth(1));
+    }
+
+    // Compound filter checkbox - re-renders graph when toggled
+    if (elements.includeCompound) {
+        elements.includeCompound.addEventListener('change', () => {
+            if (fullGraphData && currentSearchedWord) {
+                renderGraph(fullGraphData, currentSearchedWord, true);
+            }
+        });
     }
 
     // Stats toggle

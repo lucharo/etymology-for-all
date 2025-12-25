@@ -64,6 +64,13 @@ export function initCytoscape(container, onNodeTap, onBackgroundTap, onNodeHover
                     'target-arrow-color': '#78716c',
                 },
             },
+            {
+                selector: 'edge[compound]',
+                style: {
+                    'line-color': '#0c4a6e',
+                    'target-arrow-color': '#0c4a6e',
+                },
+            },
         ],
         layout: { name: 'preset' },
         minZoom: 0.3,
@@ -133,6 +140,59 @@ export function filterGraphByDepth(data, maxDepth, searchedWord) {
     return { nodes: filteredNodes, edges: filteredEdges };
 }
 
+export function filterCompoundEdges(data, includeCompound, searchedWord) {
+    if (includeCompound) {
+        return data;  // No filtering needed
+    }
+
+    // Filter out compound edges
+    const nonCompoundEdges = data.edges.filter(e => !e.compound);
+
+    // Find the start node (searched word, English)
+    const startNode = data.nodes.find(n =>
+        n.lexeme && n.lexeme.toLowerCase() === searchedWord.toLowerCase() && n.lang === 'en'
+    );
+
+    if (!startNode) {
+        // Fallback: return only non-compound connected components
+        const connectedNodeIds = new Set();
+        nonCompoundEdges.forEach(e => {
+            connectedNodeIds.add(e.source);
+            connectedNodeIds.add(e.target);
+        });
+        const filteredNodes = data.nodes.filter(n => connectedNodeIds.has(n.id));
+        return { nodes: filteredNodes, edges: nonCompoundEdges };
+    }
+
+    // BFS to find all nodes reachable from start via non-compound edges
+    const reachableNodeIds = new Set([startNode.id]);
+    const adjacency = new Map();
+    nonCompoundEdges.forEach(e => {
+        if (!adjacency.has(e.source)) adjacency.set(e.source, []);
+        adjacency.get(e.source).push(e.target);
+    });
+
+    const queue = [startNode.id];
+    while (queue.length > 0) {
+        const nodeId = queue.shift();
+        const neighbors = adjacency.get(nodeId) || [];
+        neighbors.forEach(neighborId => {
+            if (!reachableNodeIds.has(neighborId)) {
+                reachableNodeIds.add(neighborId);
+                queue.push(neighborId);
+            }
+        });
+    }
+
+    // Keep only reachable nodes and edges between them
+    const filteredNodes = data.nodes.filter(n => reachableNodeIds.has(n.id));
+    const filteredEdges = nonCompoundEdges.filter(e =>
+        reachableNodeIds.has(e.source) && reachableNodeIds.has(e.target)
+    );
+
+    return { nodes: filteredNodes, edges: filteredEdges };
+}
+
 export function calculateMaxGraphDepth(nodes, edges, startWord) {
     const nodeDepths = computeNodeDepths(nodes, edges, startWord);
     let maxDepth = 0;
@@ -176,7 +236,7 @@ export function calculateGraphDepth(startWord) {
     return maxDepth;
 }
 
-export function renderGraphElements(displayData, directionIndicator) {
+export function renderGraphElements(displayData, graphLegend, directionIndicator) {
     const elements = [];
     const seenLangs = new Map();  // lang code -> lang name
     const langCounts = new Map(); // lang name -> count
@@ -209,13 +269,17 @@ export function renderGraphElements(displayData, directionIndicator) {
 
     displayData.edges.forEach((edge) => {
         if (edge.source === edge.target) return;
+        const edgeData = {
+            id: `${edge.source}-${edge.target}`,
+            source: edge.source,
+            target: edge.target,
+        };
+        if (edge.compound) {
+            edgeData.compound = true;
+        }
         elements.push({
             group: 'edges',
-            data: {
-                id: `${edge.source}-${edge.target}`,
-                source: edge.source,
-                target: edge.target,
-            },
+            data: edgeData,
         });
     });
 
@@ -234,8 +298,14 @@ export function renderGraphElements(displayData, directionIndicator) {
 
     cy.fit(undefined, 40);
 
+    // Show the graph legend container
+    if (graphLegend) {
+        graphLegend.classList.remove('hidden');
+    }
+
+    // Update direction indicator arrow based on layout
     if (directionIndicator) {
-        directionIndicator.classList.remove('hidden', 'vertical');
+        directionIndicator.classList.remove('vertical');
         const arrow = directionIndicator.querySelector('.direction-arrow');
         if (direction === 'TB') {
             directionIndicator.classList.add('vertical');

@@ -1,4 +1,11 @@
-"""Integration tests for the FastAPI application."""
+"""Integration tests for the FastAPI application.
+
+NOTE: These tests use a real (ephemeral) DuckDB database rather than mocking.
+This is not best practice for unit tests in a team/CI environment, but works
+well for a single-developer project without CI. The tradeoff: we test that
+our SQL actually works against the real schema, at the cost of coupling tests
+to the database implementation.
+"""
 
 from __future__ import annotations
 
@@ -36,10 +43,16 @@ def _prepare_test_database() -> None:
                 (102, "proto-germanic", "twinjaz", "twin"),
                 (103, "proto-indo-european", "dwóh₁", "two"),
                 (104, "la", "geminus", "twin"),
-                # Meta-lexeme: sense=NULL is a hub for cognates
-                (200, "en", "friend", None),  # Meta-lexeme (hub node)
+                # Meta-lexeme test: word with sense appears in search
+                (200, "en", "friend", "companion"),  # English word with real sense
                 (201, "de", "Freund", "friend"),  # German cognate
                 (202, "proto-germanic", "frijōndz", "friend"),  # Proto-Germanic ancestor
+                # Compound word test: sense=NULL entries with garbage links
+                (300, "en", "uplander", "highland dweller"),  # Compound word
+                (301, "en", "upland", "elevated land"),  # Regular part
+                (302, "en", "-er", None),  # Morpheme with sense=NULL (garbage links)
+                (303, "en", "garbage1", "unrelated word 1"),  # Garbage target
+                (304, "en", "garbage2", "unrelated word 2"),  # Garbage target
             ],
         )
         conn.executemany(
@@ -59,12 +72,37 @@ def _prepare_test_database() -> None:
                 ("cog", 201, 200),  # German "Freund" -> English "friend" (meta-lexeme)
                 # Meta-lexeme also has outgoing etymology
                 ("inh", 200, 202),  # friend inherited from Proto-Germanic
+                # Compound: uplander -> sequence -> [upland, -er]
+                ("der", 300, -1),  # uplander links to sequence -1
+                # Garbage links FROM -er (sense=NULL) - should NOT be traversed
+                ("der", 302, 303),  # -er -> garbage1
+                ("der", 302, 304),  # -er -> garbage2
             ],
         )
+
+        # Sequences table (maps negative IDs to compound etymologies)
+        # Must be created before inserting sequence data
+        conn.execute("""
+            CREATE TABLE sequences (
+                seq_ix BIGINT,
+                position INT,
+                parent_ix BIGINT
+            )
+        """)
+        # Add sequence for compound word
+        conn.executemany(
+            "INSERT INTO sequences VALUES (?, ?, ?)",
+            [
+                (-1, 0, 301),  # sequence -1, position 0 -> upland
+                (-1, 1, 302),  # sequence -1, position 1 -> -er
+            ],
+        )
+
         conn.execute("CREATE INDEX idx_words_word_ix ON words(word_ix)")
         conn.execute("CREATE INDEX idx_words_lexeme ON words(lexeme)")
         conn.execute("CREATE INDEX idx_links_source ON links(source)")
         conn.execute("CREATE INDEX idx_links_target ON links(target)")
+        conn.execute("CREATE INDEX idx_sequences_seq_ix ON sequences(seq_ix)")
 
         # Gold layer: macros and views
         conn.execute("CREATE MACRO is_phrase(lexeme) AS lexeme LIKE '% %'")
@@ -72,12 +110,21 @@ def _prepare_test_database() -> None:
         conn.execute(
             "CREATE MACRO is_clean_word(lexeme) AS NOT is_phrase(lexeme) AND NOT is_proper_noun(lexeme)"
         )
+        # Filter out sense=NULL entries which have garbage etymology links
         conn.execute("""
             CREATE VIEW v_english_curated AS
             SELECT DISTINCT w.*
             FROM words w
             JOIN links l ON w.word_ix = l.source
-            WHERE w.lang = 'en' AND is_clean_word(w.lexeme)
+            WHERE w.lang = 'en' AND is_clean_word(w.lexeme) AND w.sense IS NOT NULL
+        """)
+        # View for words with "deep" etymology (at least one positive target)
+        conn.execute("""
+            CREATE VIEW v_english_deep AS
+            SELECT DISTINCT w.*
+            FROM words w
+            JOIN links l ON w.word_ix = l.source
+            WHERE w.lang = 'en' AND is_clean_word(w.lexeme) AND w.sense IS NOT NULL AND l.target > 0
         """)
         conn.execute("""
             CREATE TABLE language_families (
@@ -188,11 +235,10 @@ def test_enriched_definition_used_for_english_words():
     assert mother_node["sense"] == "A female parent"
 
 
-def test_null_sense_filtered_shows_definition():
-    """Test that sense=NULL entries are filtered out, showing Free Dictionary definition.
+def test_search_shows_etymdb_sense():
+    """Test that search returns EtymDB sense when available.
 
-    NULL senses are structural entries without meaningful info.
-    When no useful senses exist, we fall back to Free Dictionary definition.
+    Words with meaningful senses (not NULL, not equal to lexeme) show that sense.
     """
     response = client.get("/search?q=friend")
     assert response.status_code == 200
@@ -202,6 +248,30 @@ def test_null_sense_filtered_shows_definition():
     friend_results = [r for r in results if r["word"] == "friend"]
     assert len(friend_results) == 1
 
-    # Should show Free Dictionary definition (or None if not enriched in test DB)
-    # The NULL sense entry should be filtered out, not displayed
-    assert friend_results[0]["sense"] != "MetaLexeme"
+    # Should show the EtymDB sense
+    assert friend_results[0]["sense"] == "companion"
+
+
+def test_compound_includes_morpheme_but_not_garbage_links():
+    """Test that compound words include sense=NULL morphemes but don't traverse their garbage links.
+
+    Regression test for PR #41: -er, -al, -ic etc. with sense=NULL had garbage etymology
+    links to unrelated words. Fix: include morphemes as nodes but don't follow their links.
+    """
+    response = client.get("/graph/uplander")
+    assert response.status_code == 200
+    payload = response.json()
+
+    lexemes = {n["lexeme"] for n in payload["nodes"]}
+
+    # Should include the compound parts
+    assert "uplander" in lexemes, "Main word should be in graph"
+    assert "upland" in lexemes, "Regular compound part should be in graph"
+    assert "-er" in lexemes, "Morpheme with sense=NULL should still be in graph"
+
+    # Should NOT include garbage words linked FROM sense=NULL entry
+    assert "garbage1" not in lexemes, "Should not traverse links FROM sense=NULL entries"
+    assert "garbage2" not in lexemes, "Should not traverse links FROM sense=NULL entries"
+
+    # Verify we have the expected number of nodes (uplander, upland, -er = 3)
+    assert len(payload["nodes"]) == 3

@@ -45,9 +45,14 @@ def get_graph(request: Request, word: str, depth: int = 5):
 
 @app.get("/random")
 @limiter.limit("50/minute")
-def get_random_word(request: Request):
-    """Return a random English word from the dataset."""
-    return fetch_random_word()
+def get_random_word(request: Request, include_compound: bool = True):
+    """Return a random English word from the dataset.
+
+    Args:
+        include_compound: If True (default), include compound-only words.
+                         If False, only return words with deep etymology chains.
+    """
+    return fetch_random_word(include_compound=include_compound)
 
 
 @app.get("/search")
