@@ -35,20 +35,33 @@ These aren't broken data - they're **rich compound etymologies** we weren't load
 | `etymdb_links_info.csv` | 700K | Etymology links (type, source, target) |
 | `etymdb_links_index.csv` | 80K | **NEW**: Sequence definitions (seq_id → parents) |
 
+### Data Quality: Filter sense=NULL Entries
+
+The EtymDB paper notes that 40% of lexemes lack glosses/senses. We discovered that `sense=NULL` entries in English often have **corrupted etymology links**:
+
+- **Problem**: Suffix entries like `-er`, `-al`, `-ic` with NULL sense had garbage links to unrelated words like "asteroid belt", "scouse", "lexical"
+- **Root cause**: These are structural entries extracted from etymology sections without proper definitions
+- **Solution**: Filter out `sense IS NULL` from curated views
+- **Impact**: Removes only 483 entries (1% of curated words)
+
+The legitimate suffix entries (e.g., `-er` with sense "agency forming") have proper senses but no etymology links anyway, so filtering NULL senses removes only garbage data.
+
 ### Word Statistics
 
 | Etymology Type | Count | Percentage |
 |----------------|-------|------------|
-| Deep etymology (positive targets) | 39,920 | 79.9% |
-| Compound-only (negative targets) | 9,501 | 19.0% |
-| Mixed (both) | 536 | 1.1% |
-| **Total curated words** | **49,957** | 100% |
+| Deep etymology (positive targets) | ~40,000 | 80.9% |
+| Compound-only (negative targets) | ~9,000 | 18.2% |
+| Mixed (both) | ~470 | 0.9% |
+| **Total curated words** | **49,474** | 100% |
+
+*Note: 483 sense=NULL entries filtered out for data quality.*
 
 ### UI Feature: Compound Filter
 
 Added "Include compounds" checkbox to control random word selection:
-- **Checked (default)**: All 49,957 curated words
-- **Unchecked**: Only 40,456 words with deep etymology chains
+- **Checked (default)**: All 49,474 curated words
+- **Unchecked**: Only ~40,000 words with deep etymology chains
 
 This lets users focus on words with richer etymology trees if desired.
 
