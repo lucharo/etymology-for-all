@@ -704,9 +704,10 @@ button:active {
 
 /* Direction indicator within legend */
 #direction-indicator {
-    display: flex;
+    display: inline-flex !important;
     align-items: center;
     gap: var(--space-xs);
+    visibility: visible !important;
 }
 
 #direction-indicator.vertical {
@@ -716,13 +717,15 @@ button:active {
 .direction-label {
     font-family: var(--font-sans);
     letter-spacing: 0.02em;
-    color: var(--text-muted);
+    color: var(--text-muted) !important;
+    display: inline !important;
 }
 
 .direction-arrow {
-    color: var(--text-muted);
+    color: var(--text-muted) !important;
     font-size: 1rem;
     line-height: 1;
+    display: inline !important;
 }
 
 /* Legend divider */
