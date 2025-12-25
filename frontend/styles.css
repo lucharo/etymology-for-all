@@ -716,6 +716,7 @@ button:active {
 .direction-label {
     font-family: var(--font-sans);
     letter-spacing: 0.02em;
+    color: var(--text-muted);
 }
 
 .direction-arrow {
