@@ -193,17 +193,22 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
                 """
                 WITH RECURSIVE
                 -- Resolve negative targets through sequences table
+                -- Filter out sense=NULL entries (garbage data, see PR #41)
                 resolved_links AS (
                     -- Simple links (positive target = direct word reference)
-                    SELECT source, target AS parent_ix, FALSE AS is_compound
-                    FROM links
-                    WHERE target > 0
+                    SELECT l.source, l.target AS parent_ix, FALSE AS is_compound
+                    FROM links l
+                    JOIN words w ON w.word_ix = l.target
+                    WHERE l.target > 0
+                      AND (w.lang != 'en' OR w.sense IS NOT NULL)
                     UNION ALL
                     -- Compound links (negative target = sequence, resolve to parents)
                     SELECT l.source, s.parent_ix, TRUE AS is_compound
                     FROM links l
                     JOIN sequences s ON s.seq_ix = l.target
+                    JOIN words w ON w.word_ix = s.parent_ix
                     WHERE l.target < 0
+                      AND (w.lang != 'en' OR w.sense IS NOT NULL)
                 ),
                 traversal(child_ix, parent_ix, is_compound, lvl) AS (
                     SELECT source, parent_ix, is_compound, 1
