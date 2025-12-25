@@ -4,6 +4,15 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.11.0 - Bug Fixes and Improvements (2025-12-25)
+
+Small bug fixes and improvements to backend, UI, and documentation.
+
+### UI
+- **Dice icon** for random button (replaces abstract cube for better clarity)
+
+---
+
 ## v0.10.0 - Compound Etymology Support (2024-12-25) 🎄
 
 ### Critical Discovery: "Broken Links" Were Compound Etymologies!
