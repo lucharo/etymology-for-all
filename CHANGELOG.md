@@ -84,7 +84,7 @@ Words with compound etymologies now show their full ancestry instead of 404 erro
 - `backend/ingest.py` - Creates normalized sequences table + `v_english_deep` view
 - `backend/database.py` - Resolves compound etymologies in graph traversal; tracks `is_compound` edge flag
 - `backend/main.py` - Added `include_compound` query parameter to `/random`
-- `backend/tests/test_api.py` - Added sequences table and deep view to test fixtures
+- `backend/tests/test_api.py` - Added sequences table, deep view, and regression test for garbage link filtering
 - `frontend/index.html` - Added "Include compounds" checkbox; added graph legend with edge types
 - `frontend/js/app.js` - Wires checkbox to random word fetch; passes legend to graph renderer
 - `frontend/js/graph.js` - Added compound edge styling (`edge[compound]`); accepts legend parameter
