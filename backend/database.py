@@ -263,12 +263,16 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
         return {"nodes": list(nodes.values()), "edges": edges}
 
 
-def fetch_random_word() -> dict[str, str | None]:
-    """Return a random curated English word (has etymology, no phrases/proper nouns)."""
+def fetch_random_word(include_compound: bool = True) -> dict[str, str | None]:
+    """Return a random curated English word (has etymology, no phrases/proper nouns).
+
+    Args:
+        include_compound: If True, include compound-only words (e.g., "acquaintanceship").
+                         If False, only return words with "deep" etymology chains.
+    """
+    view = "v_english_curated" if include_compound else "v_english_deep"
     with _ConnectionManager() as conn:
-        row = conn.execute(
-            "SELECT lexeme FROM v_english_curated ORDER BY random() LIMIT 1"
-        ).fetchone()
+        row = conn.execute(f"SELECT lexeme FROM {view} ORDER BY random() LIMIT 1").fetchone()
         return {"word": row[0] if row else None}
 
 

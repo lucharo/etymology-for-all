@@ -35,15 +35,37 @@ These aren't broken data - they're **rich compound etymologies** we weren't load
 | `etymdb_links_info.csv` | 700K | Etymology links (type, source, target) |
 | `etymdb_links_index.csv` | 80K | **NEW**: Sequence definitions (seq_id → parents) |
 
+### Word Statistics
+
+| Etymology Type | Count | Percentage |
+|----------------|-------|------------|
+| Deep etymology (positive targets) | 39,920 | 79.9% |
+| Compound-only (negative targets) | 9,501 | 19.0% |
+| Mixed (both) | 536 | 1.1% |
+| **Total curated words** | **49,957** | 100% |
+
+### UI Feature: Compound Filter
+
+Added "Include compounds" checkbox to control random word selection:
+- **Checked (default)**: All 49,957 curated words
+- **Unchecked**: Only 40,456 words with deep etymology chains
+
+This lets users focus on words with richer etymology trees if desired.
+
 ### Impact
 
 Words with compound etymologies now show their full ancestry instead of 404 errors. This significantly improves the random word feature and graph completeness.
 
 ### Files Modified
 - `backend/download_data.py` - Downloads third CSV file
-- `backend/ingest.py` - Creates normalized sequences table
+- `backend/ingest.py` - Creates normalized sequences table + `v_english_deep` view
 - `backend/database.py` - Resolves compound etymologies in graph traversal
-- `backend/tests/test_api.py` - Added sequences table to test fixtures
+- `backend/main.py` - Added `include_compound` query parameter to `/random`
+- `backend/tests/test_api.py` - Added sequences table and deep view to test fixtures
+- `frontend/index.html` - Added "Include compounds" checkbox
+- `frontend/js/app.js` - Wires checkbox to random word fetch
+- `frontend/js/search.js` - Accepts `includeCompound` parameter
+- `frontend/styles.css` - Checkbox styling
 
 ---
 

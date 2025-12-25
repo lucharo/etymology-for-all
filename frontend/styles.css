@@ -96,6 +96,34 @@ h1 {
     margin-bottom: var(--space-xs);
 }
 
+/* Random word options */
+.random-options {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--space-sm);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+.checkbox-label:hover {
+    color: var(--text);
+}
+
 /* Graph options */
 .graph-options {
     display: flex;

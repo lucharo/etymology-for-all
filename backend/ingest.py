@@ -142,6 +142,18 @@ def main() -> None:
               AND is_clean_word(w.lexeme)
         """)
 
+        # View for words with "deep" etymology (at least one link to a real word)
+        # Excludes compound-only words where all links point to sequences (negative IDs)
+        conn.execute("""
+            CREATE OR REPLACE VIEW v_english_deep AS
+            SELECT DISTINCT w.*
+            FROM words w
+            JOIN links l ON w.word_ix = l.source
+            WHERE w.lang = 'en'
+              AND is_clean_word(w.lexeme)
+              AND l.target > 0
+        """)
+
         # Language families reference table
         # Load from language_codes.json (2400+ language code mappings)
         # Run `python -m backend.download_language_codes` to generate this file

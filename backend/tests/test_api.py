@@ -96,6 +96,14 @@ def _prepare_test_database() -> None:
             JOIN links l ON w.word_ix = l.source
             WHERE w.lang = 'en' AND is_clean_word(w.lexeme)
         """)
+        # View for words with "deep" etymology (at least one positive target)
+        conn.execute("""
+            CREATE VIEW v_english_deep AS
+            SELECT DISTINCT w.*
+            FROM words w
+            JOIN links l ON w.word_ix = l.source
+            WHERE w.lang = 'en' AND is_clean_word(w.lexeme) AND l.target > 0
+        """)
         conn.execute("""
             CREATE TABLE language_families (
                 lang_code VARCHAR PRIMARY KEY, lang_name VARCHAR, family VARCHAR, branch VARCHAR

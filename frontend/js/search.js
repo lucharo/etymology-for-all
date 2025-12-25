@@ -12,8 +12,8 @@ export async function fetchEtymology(word) {
     return response.json();
 }
 
-export async function fetchRandomWord() {
-    const response = await fetch(`/random`);
+export async function fetchRandomWord(includeCompound = true) {
+    const response = await fetch(`/random?include_compound=${includeCompound}`);
     await handleApiResponse(response, 'random word');
     const data = await response.json();
     return data.word;

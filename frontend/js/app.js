@@ -38,6 +38,7 @@ const elements = {
     wordInput: document.getElementById('word-input'),
     searchBtn: document.getElementById('search-btn'),
     randomBtn: document.getElementById('random-btn'),
+    includeCompound: document.getElementById('include-compound'),
     graphContainer: document.getElementById('graph-container'),
     cyContainer: document.getElementById('cy'),
     loadingEl: document.getElementById('loading'),
@@ -139,7 +140,8 @@ async function handleRandom() {
     showLoading(elements);
 
     try {
-        const word = await fetchRandomWord();
+        const includeCompound = elements.includeCompound?.checked ?? true;
+        const word = await fetchRandomWord(includeCompound);
         if (!word) {
             showError('Could not get a random word', elements, minimizeGraph);
             return;
