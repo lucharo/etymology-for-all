@@ -24,6 +24,7 @@ Small bug fixes and improvements to backend, UI, and documentation.
 ### Documentation
 - **PR changelog check** - GitHub Action verifies CHANGELOG.md is updated in PRs
 - Add `skip-changelog` label to bypass for non-user-facing changes
+- **Expanded Glossary** with new terms: Etymology, Compound Etymology, Morpheme, Proto-language
 
 ---
 
