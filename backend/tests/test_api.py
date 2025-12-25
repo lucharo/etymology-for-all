@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 
 import duckdb
+import pytest
 from fastapi.testclient import TestClient
 
 TEMP_DIR = Path(tempfile.mkdtemp(prefix="etymdb-test-"))
@@ -163,15 +164,16 @@ def test_graph_endpoint_returns_nodes_and_edges():
     assert any(node["lexeme"] == "mother" for node in payload["nodes"])
 
 
-def test_graph_endpoint_missing_word():
-    response = client.get("/graph/unknownword")
-    assert response.status_code == 404
-
-
-def test_graph_endpoint_word_without_etymology():
-    """Test that words with no etymology links return 404."""
-    # "loneword" exists in DB but has no links, so it should return 404
-    response = client.get("/graph/loneword")
+@pytest.mark.parametrize(
+    "word",
+    [
+        pytest.param("unknownword", id="missing-word"),
+        pytest.param("loneword", id="no-etymology"),
+    ],
+)
+def test_graph_endpoint_returns_404(word):
+    """Test that graph returns 404 for missing words or words without etymology."""
+    response = client.get(f"/graph/{word}")
     assert response.status_code == 404
 
 
