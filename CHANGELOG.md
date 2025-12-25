@@ -4,6 +4,16 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.11.0 - Bug Fixes and Improvements (2025-12-25)
+
+Small bug fixes and improvements to backend, UI, and documentation.
+
+### Documentation
+- **PR changelog check** - GitHub Action verifies CHANGELOG.md is updated in PRs
+- Add `skip-changelog` label to bypass for non-user-facing changes
+
+---
+
 ## v0.10.0 - Compound Etymology Support (2024-12-25) 🎄
 
 ### Critical Discovery: "Broken Links" Were Compound Etymologies!
