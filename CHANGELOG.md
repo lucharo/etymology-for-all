@@ -4,18 +4,17 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
-## v0.9.1 - All Definitions Extracted (2024-12-23)
+## v0.11.0 - Bug Fixes and Improvements (2025-12-25)
 
-### Definition Enrichment
+Small bug fixes and improvements to backend, UI, and documentation.
+
+### Backend
 - **102,734 total definitions** extracted from Free Dictionary API responses (was 21,256)
-- Average **4.8 definitions per word** - captures nouns, verbs, adjectives, and all senses
 - New schema with `entry_idx`, `meaning_idx`, `def_idx` columns for precise definition lookup
-- Search autocomplete shows "(+N more)" indicator for polysemous words
+- Updated `materialize_definitions()` for JSON array expansion
 
-### Technical Changes
-- Updated `materialize_definitions()` to use DuckDB's `unnest()` and `from_json()` for JSON array expansion
-- Maintains primary definition (entry=0, meaning=0, def=0) for graph nodes
-- Better test coverage with new schema validation
+### UI
+- Search autocomplete shows "(+N more)" indicator for polysemous words
 
 ---
 
