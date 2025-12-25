@@ -105,7 +105,7 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
     let displayData = filterByDepth
         ? filterGraphByDepth(fullGraphData, currentDepth, searchedWord)
         : data;
-    displayData = filterCompoundEdges(displayData, includeCompound);
+    displayData = filterCompoundEdges(displayData, includeCompound, searchedWord);
 
     if (elements.graphOptions) elements.graphOptions.classList.remove('hidden');
     updateDepthUI(currentDepth, graphMaxDepth, elements);

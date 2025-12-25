@@ -140,29 +140,57 @@ export function filterGraphByDepth(data, maxDepth, searchedWord) {
     return { nodes: filteredNodes, edges: filteredEdges };
 }
 
-export function filterCompoundEdges(data, includeCompound) {
+export function filterCompoundEdges(data, includeCompound, searchedWord) {
     if (includeCompound) {
         return data;  // No filtering needed
     }
-    // Filter out compound edges and nodes that become orphaned
+
+    // Filter out compound edges
     const nonCompoundEdges = data.edges.filter(e => !e.compound);
 
-    // Find nodes still connected after removing compound edges
-    const connectedNodeIds = new Set();
-    nonCompoundEdges.forEach(e => {
-        connectedNodeIds.add(e.source);
-        connectedNodeIds.add(e.target);
-    });
-
-    // Keep nodes that are connected OR are the start node (has no outgoing edges in original)
-    const startNodes = new Set(data.nodes.map(n => n.id));
-    data.edges.forEach(e => startNodes.delete(e.target));  // Remove nodes that are targets
-
-    const filteredNodes = data.nodes.filter(n =>
-        connectedNodeIds.has(n.id) || startNodes.has(n.id)
+    // Find the start node (searched word, English)
+    const startNode = data.nodes.find(n =>
+        n.lexeme && n.lexeme.toLowerCase() === searchedWord.toLowerCase() && n.lang === 'en'
     );
 
-    return { nodes: filteredNodes, edges: nonCompoundEdges };
+    if (!startNode) {
+        // Fallback: return only non-compound connected components
+        const connectedNodeIds = new Set();
+        nonCompoundEdges.forEach(e => {
+            connectedNodeIds.add(e.source);
+            connectedNodeIds.add(e.target);
+        });
+        const filteredNodes = data.nodes.filter(n => connectedNodeIds.has(n.id));
+        return { nodes: filteredNodes, edges: nonCompoundEdges };
+    }
+
+    // BFS to find all nodes reachable from start via non-compound edges
+    const reachableNodeIds = new Set([startNode.id]);
+    const adjacency = new Map();
+    nonCompoundEdges.forEach(e => {
+        if (!adjacency.has(e.source)) adjacency.set(e.source, []);
+        adjacency.get(e.source).push(e.target);
+    });
+
+    const queue = [startNode.id];
+    while (queue.length > 0) {
+        const nodeId = queue.shift();
+        const neighbors = adjacency.get(nodeId) || [];
+        neighbors.forEach(neighborId => {
+            if (!reachableNodeIds.has(neighborId)) {
+                reachableNodeIds.add(neighborId);
+                queue.push(neighborId);
+            }
+        });
+    }
+
+    // Keep only reachable nodes and edges between them
+    const filteredNodes = data.nodes.filter(n => reachableNodeIds.has(n.id));
+    const filteredEdges = nonCompoundEdges.filter(e =>
+        reachableNodeIds.has(e.source) && reachableNodeIds.has(e.target)
+    );
+
+    return { nodes: filteredNodes, edges: filteredEdges };
 }
 
 export function calculateMaxGraphDepth(nodes, edges, startWord) {
