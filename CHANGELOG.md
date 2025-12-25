@@ -4,21 +4,12 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
-## v0.9.1 - SQL Refactor (2024-12-24)
+## v0.11.0 - Bug Fixes and Improvements (2025-12-25)
 
-### Code Architecture
-- **SQL files refactor** - Moved SQL from Python strings to separate `.sql` files
-- New `backend/sql/` directory with 7 SQL files for better maintainability
-- Syntax highlighting and easier testing of individual SQL statements
+Small bug fixes and improvements to backend, UI, and documentation.
 
-### Files Added
-- `backend/sql/01_create_words.sql` - Words table creation
-- `backend/sql/02_create_links.sql` - Links table creation
-- `backend/sql/03_create_indexes.sql` - Index definitions
-- `backend/sql/04_create_macros.sql` - Reusable filtering macros
-- `backend/sql/05_create_views.sql` - Curated views
-- `backend/sql/06_create_language_families.sql` - Language families table
-- `backend/sql/07_create_definitions_raw.sql` - Definitions table
+### Backend
+- **SQL files refactor** - Moved SQL from Python strings to separate `.sql` files in `backend/sql/`
 
 ---
 
