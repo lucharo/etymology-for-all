@@ -52,6 +52,16 @@ Added "Include compounds" checkbox to control random word selection:
 
 This lets users focus on words with richer etymology trees if desired.
 
+### UI Feature: Compound Edge Visualization
+
+Compound etymology edges now display in a distinct color:
+- **Regular etymology edges**: Gray (`#d6d3d1`)
+- **Compound etymology edges**: Blue (`#0c4a6e` / `var(--accent)`)
+
+Added graph legend showing:
+- Direction indicator (Recent → Ancient)
+- Edge type legend (Etymology vs Compound)
+
 ### Impact
 
 Words with compound etymologies now show their full ancestry instead of 404 errors. This significantly improves the random word feature and graph completeness.
@@ -59,13 +69,14 @@ Words with compound etymologies now show their full ancestry instead of 404 erro
 ### Files Modified
 - `backend/download_data.py` - Downloads third CSV file
 - `backend/ingest.py` - Creates normalized sequences table + `v_english_deep` view
-- `backend/database.py` - Resolves compound etymologies in graph traversal
+- `backend/database.py` - Resolves compound etymologies in graph traversal; tracks `is_compound` edge flag
 - `backend/main.py` - Added `include_compound` query parameter to `/random`
 - `backend/tests/test_api.py` - Added sequences table and deep view to test fixtures
-- `frontend/index.html` - Added "Include compounds" checkbox
-- `frontend/js/app.js` - Wires checkbox to random word fetch
+- `frontend/index.html` - Added "Include compounds" checkbox; added graph legend with edge types
+- `frontend/js/app.js` - Wires checkbox to random word fetch; passes legend to graph renderer
+- `frontend/js/graph.js` - Added compound edge styling (`edge[compound]`); accepts legend parameter
 - `frontend/js/search.js` - Accepts `includeCompound` parameter
-- `frontend/styles.css` - Checkbox styling
+- `frontend/styles.css` - Checkbox styling; legend styling
 
 ---
 

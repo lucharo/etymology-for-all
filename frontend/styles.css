@@ -684,8 +684,8 @@ button:active {
     display: block;
 }
 
-/* Direction indicator */
-#direction-indicator {
+/* Graph legend */
+.graph-legend {
     position: absolute;
     bottom: var(--space-md);
     left: var(--space-md);
@@ -702,9 +702,15 @@ button:active {
     backdrop-filter: blur(4px);
 }
 
+/* Direction indicator within legend */
+#direction-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
 #direction-indicator.vertical {
     flex-direction: column;
-    padding: var(--space-sm) var(--space-xs);
 }
 
 .direction-label {
@@ -716,6 +722,40 @@ button:active {
     color: var(--text-muted);
     font-size: 1rem;
     line-height: 1;
+}
+
+/* Legend divider */
+.legend-divider {
+    color: var(--border);
+    font-weight: 300;
+}
+
+/* Edge type legend */
+.edge-legend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.legend-line {
+    display: inline-block;
+    width: 20px;
+    height: 2px;
+    vertical-align: middle;
+}
+
+.legend-line.regular {
+    background: #d6d3d1;
+}
+
+.legend-line.compound {
+    background: var(--accent);
 }
 
 /* Header buttons */
@@ -984,12 +1024,21 @@ footer a:hover {
         flex: 1;
     }
 
-    /* Direction indicator smaller */
-    #direction-indicator {
+    /* Legend smaller on mobile */
+    .graph-legend {
         font-size: 0.6rem;
         padding: 4px 6px;
         bottom: var(--space-sm);
         left: var(--space-sm);
+        gap: var(--space-xs);
+    }
+
+    .edge-legend {
+        gap: var(--space-xs);
+    }
+
+    .legend-line {
+        width: 14px;
     }
 
     /* Detail panel full width at bottom on mobile */

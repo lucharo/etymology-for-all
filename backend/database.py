@@ -188,28 +188,29 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
         if depth > 0:
             # Recursive traversal that handles both simple links and compound etymologies
             # When target < 0, it's a sequence ID that resolves to multiple parent words
+            # Track is_compound to style compound edges differently in the UI
             records = conn.execute(
                 """
                 WITH RECURSIVE
                 -- Resolve negative targets through sequences table
                 resolved_links AS (
                     -- Simple links (positive target = direct word reference)
-                    SELECT source, target AS parent_ix
+                    SELECT source, target AS parent_ix, FALSE AS is_compound
                     FROM links
                     WHERE target > 0
                     UNION ALL
                     -- Compound links (negative target = sequence, resolve to parents)
-                    SELECT l.source, s.parent_ix
+                    SELECT l.source, s.parent_ix, TRUE AS is_compound
                     FROM links l
                     JOIN sequences s ON s.seq_ix = l.target
                     WHERE l.target < 0
                 ),
-                traversal(child_ix, parent_ix, lvl) AS (
-                    SELECT source, parent_ix, 1
+                traversal(child_ix, parent_ix, is_compound, lvl) AS (
+                    SELECT source, parent_ix, is_compound, 1
                     FROM resolved_links
                     WHERE source = ?
                     UNION ALL
-                    SELECT rl.source, rl.parent_ix, lvl + 1
+                    SELECT rl.source, rl.parent_ix, rl.is_compound, lvl + 1
                     FROM traversal t
                     JOIN resolved_links rl ON rl.source = t.parent_ix
                     WHERE lvl < ?
@@ -222,7 +223,8 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
                     parent.word_ix AS parent_ix,
                     parent.lexeme AS parent_lexeme,
                     parent.lang AS parent_lang,
-                    parent.sense AS parent_sense
+                    parent.sense AS parent_sense,
+                    tr.is_compound
                 FROM traversal tr
                 JOIN words child ON child.word_ix = tr.child_ix
                 JOIN words parent ON parent.word_ix = tr.parent_ix
@@ -232,19 +234,23 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
 
             for row in records:
                 child_ix, child_lexeme, child_lang, child_sense = row[:4]
-                parent_ix, parent_lexeme, parent_lang, parent_sense = row[4:]
+                parent_ix, parent_lexeme, parent_lang, parent_sense = row[4:8]
+                is_compound = row[8]
 
                 raw_nodes.setdefault(child_ix, (child_lexeme, child_lang, child_sense))
                 raw_nodes.setdefault(parent_ix, (parent_lexeme, parent_lang, parent_sense))
 
-                # Build edges
+                # Build edges with compound flag for UI styling
                 child_id = _make_node_id(child_lexeme, child_lang)
                 parent_id = _make_node_id(parent_lexeme, parent_lang)
                 if child_id != parent_id:
                     edge_key = (child_id, parent_id)
                     if edge_key not in seen_edges:
                         seen_edges.add(edge_key)
-                        edges.append({"source": child_id, "target": parent_id})
+                        edge = {"source": child_id, "target": parent_id}
+                        if is_compound:
+                            edge["compound"] = True
+                        edges.append(edge)
 
         # Fetch definitions only for English lexemes in this graph
         english_lexemes = [lex for lex, lang, _ in raw_nodes.values() if lang == "en"]

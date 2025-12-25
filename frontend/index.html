@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=31">
+    <link rel="stylesheet" href="styles.css?v=32">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
@@ -113,11 +113,24 @@
             </div>
             <div id="cy"></div>
 
-            <!-- Direction indicator -->
-            <div id="direction-indicator" class="hidden">
-                <span class="direction-label direction-recent">Recent</span>
-                <span class="direction-arrow">→</span>
-                <span class="direction-label direction-ancient">Ancient</span>
+            <!-- Graph legend -->
+            <div class="graph-legend hidden" id="graph-legend">
+                <div id="direction-indicator">
+                    <span class="direction-label direction-recent">Recent</span>
+                    <span class="direction-arrow">→</span>
+                    <span class="direction-label direction-ancient">Ancient</span>
+                </div>
+                <span class="legend-divider">|</span>
+                <div class="edge-legend">
+                    <span class="legend-item">
+                        <span class="legend-line regular"></span>
+                        <span>Etymology</span>
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-line compound"></span>
+                        <span>Compound</span>
+                    </span>
+                </div>
             </div>
 
             <!-- Node detail panel -->
