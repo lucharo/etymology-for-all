@@ -1,4 +1,11 @@
-"""Integration tests for the FastAPI application."""
+"""Integration tests for the FastAPI application.
+
+NOTE: These tests use a real (ephemeral) DuckDB database rather than mocking.
+This is not best practice for unit tests in a team/CI environment, but works
+well for a single-developer project without CI. The tradeoff: we test that
+our SQL actually works against the real schema, at the cost of coupling tests
+to the database implementation.
+"""
 
 from __future__ import annotations
 
@@ -65,6 +72,16 @@ def _prepare_test_database() -> None:
         conn.execute("CREATE INDEX idx_words_lexeme ON words(lexeme)")
         conn.execute("CREATE INDEX idx_links_source ON links(source)")
         conn.execute("CREATE INDEX idx_links_target ON links(target)")
+
+        # Sequences table (maps negative IDs to compound etymologies)
+        conn.execute("""
+            CREATE TABLE sequences (
+                seq_ix BIGINT,
+                position INT,
+                parent_ix BIGINT
+            )
+        """)
+        conn.execute("CREATE INDEX idx_sequences_seq_ix ON sequences(seq_ix)")
 
         # Gold layer: macros and views
         conn.execute("CREATE MACRO is_phrase(lexeme) AS lexeme LIKE '% %'")

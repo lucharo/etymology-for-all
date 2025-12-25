@@ -186,16 +186,32 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
         seen_edges: set[tuple[str, str]] = set()
 
         if depth > 0:
+            # Recursive traversal that handles both simple links and compound etymologies
+            # When target < 0, it's a sequence ID that resolves to multiple parent words
             records = conn.execute(
                 """
-                WITH RECURSIVE traversal(child_ix, parent_ix, lvl) AS (
-                    SELECT source, target, 1
+                WITH RECURSIVE
+                -- Resolve negative targets through sequences table
+                resolved_links AS (
+                    -- Simple links (positive target = direct word reference)
+                    SELECT source, target AS parent_ix
                     FROM links
+                    WHERE target > 0
+                    UNION ALL
+                    -- Compound links (negative target = sequence, resolve to parents)
+                    SELECT l.source, s.parent_ix
+                    FROM links l
+                    JOIN sequences s ON s.seq_ix = l.target
+                    WHERE l.target < 0
+                ),
+                traversal(child_ix, parent_ix, lvl) AS (
+                    SELECT source, parent_ix, 1
+                    FROM resolved_links
                     WHERE source = ?
                     UNION ALL
-                    SELECT l.source, l.target, lvl + 1
+                    SELECT rl.source, rl.parent_ix, lvl + 1
                     FROM traversal t
-                    JOIN links l ON l.source = t.parent_ix
+                    JOIN resolved_links rl ON rl.source = t.parent_ix
                     WHERE lvl < ?
                 )
                 SELECT

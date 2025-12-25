@@ -17,6 +17,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 FILES: dict[str, str] = {
     "etymdb_values.csv": "https://raw.githubusercontent.com/clefourrier/EtymDB/master/data/split_etymdb/etymdb_values.csv",
     "etymdb_links_info.csv": "https://raw.githubusercontent.com/clefourrier/EtymDB/master/data/split_etymdb/etymdb_links_info.csv",
+    "etymdb_links_index.csv": "https://raw.githubusercontent.com/clefourrier/EtymDB/master/data/split_etymdb/etymdb_links_index.csv",
 }
 
 _CHUNK_SIZE = 1 << 20  # 1 MiB

@@ -4,6 +4,49 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.10.0 - Compound Etymology Support (2024-12-25) 🎄
+
+### Critical Discovery: "Broken Links" Were Compound Etymologies!
+
+In v0.4.1, we documented "80,921 broken links pointing to non-existent word entries (negative `word_ix`)". **This was wrong!** After reading the [EtymDB 2.0 academic paper](https://aclanthology.org/2020.lrec-1.392/), we discovered:
+
+- **Negative IDs are lexeme sequences** - references to compound etymologies involving multiple source words
+- **80,265 lexeme sequences** exist in EtymDB for words derived from 2+ parent words
+- Example: "encyclopedia" comes from Greek ἐγκύκλιος (enkyklios) + παιδείᾱ (paideia)
+- Example: "memoriousness" = "memorious" + "-ness"
+
+These aren't broken data - they're **rich compound etymologies** we weren't loading!
+
+### Fixes
+
+- **Added `etymdb_links_index.csv`** - third data file mapping sequence IDs to parent words
+- **New `sequences` table** in DuckDB with normalized structure:
+  - `seq_ix`: Negative sequence ID (e.g., -1, -2)
+  - `position`: Order of parent (0 = first, 1 = second, etc.)
+  - `parent_ix`: Positive word ID of parent word
+- **Updated etymology traversal** to resolve negative targets through sequences
+- **165,093 sequence entries** now properly loaded (80K sequences × ~2 parents each)
+
+### Data Pipeline Changes
+
+| File | Records | Purpose |
+|------|---------|---------|
+| `etymdb_values.csv` | 1.9M | Words (id, lang, lexeme, sense) |
+| `etymdb_links_info.csv` | 700K | Etymology links (type, source, target) |
+| `etymdb_links_index.csv` | 80K | **NEW**: Sequence definitions (seq_id → parents) |
+
+### Impact
+
+Words with compound etymologies now show their full ancestry instead of 404 errors. This significantly improves the random word feature and graph completeness.
+
+### Files Modified
+- `backend/download_data.py` - Downloads third CSV file
+- `backend/ingest.py` - Creates normalized sequences table
+- `backend/database.py` - Resolves compound etymologies in graph traversal
+- `backend/tests/test_api.py` - Added sequences table to test fixtures
+
+---
+
 ## v0.9.0 - Language Name Mappings (2024-12-23)
 
 ### Language Display
