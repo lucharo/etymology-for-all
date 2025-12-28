@@ -4,6 +4,20 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.11.0 - Bug Fixes and Improvements (2025-12-25)
+
+Small bug fixes and improvements to backend, UI, and documentation.
+
+### Backend
+- **102,734 total definitions** extracted from Free Dictionary API responses (was 21,256)
+- New schema with `entry_idx`, `meaning_idx`, `def_idx` columns for precise definition lookup
+- Updated `materialize_definitions()` for JSON array expansion
+
+### UI
+- Search autocomplete shows "(+N more)" indicator for polysemous words
+
+---
+
 ## v0.10.0 - Compound Etymology Support (2024-12-25) 🎄
 
 ### Critical Discovery: "Broken Links" Were Compound Etymologies!

@@ -102,9 +102,11 @@ def ensure_definitions_table(conn: duckdb.DuckDBPyConnection) -> None:
 def materialize_definitions(conn: duckdb.DuckDBPyConnection) -> None:
     """Materialize parsed definitions into a proper table.
 
-    This avoids JSON parsing on every query. The raw JSON is kept in
-    definitions_raw for debugging/reprocessing if needed.
+    Extracts ALL definitions from the Free Dictionary API response,
+    not just the first one. Each row represents one definition with
+    indexes for entry, meaning, and definition within the JSON structure.
 
+    The raw JSON is kept in definitions_raw for debugging/reprocessing.
     Lexeme is stored lowercase for fast equality joins.
     """
     print("Materializing definitions table...")
@@ -112,18 +114,47 @@ def materialize_definitions(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute("DROP VIEW IF EXISTS v_definitions")  # Remove legacy view
     conn.execute("""
         CREATE TABLE definitions AS
+        WITH entries AS (
+            SELECT
+                lower(lexeme) as lexeme,
+                unnest(from_json(api_response, '["json"]')) as entry,
+                generate_subscripts(from_json(api_response, '["json"]'), 1) - 1 as entry_idx
+            FROM definitions_raw
+            WHERE status = 'success'
+        ),
+        meanings AS (
+            SELECT
+                lexeme, entry_idx,
+                unnest(from_json(json_extract(entry, '$.meanings'), '["json"]')) as meaning,
+                generate_subscripts(from_json(json_extract(entry, '$.meanings'), '["json"]'), 1) - 1 as meaning_idx
+            FROM entries
+        ),
+        defs AS (
+            SELECT
+                lexeme, entry_idx, meaning_idx,
+                json_extract_string(meaning, '$.partOfSpeech') as part_of_speech,
+                unnest(from_json(json_extract(meaning, '$.definitions'), '["json"]')) as def,
+                generate_subscripts(from_json(json_extract(meaning, '$.definitions'), '["json"]'), 1) - 1 as def_idx
+            FROM meanings
+        )
         SELECT
-            lower(lexeme) as lexeme,
-            CAST(api_response->'$[0]'->'meanings'->'$[0]'->'definitions'->'$[0]'->'definition' AS VARCHAR) as definition,
-            CAST(api_response->'$[0]'->'meanings'->'$[0]'->'partOfSpeech' AS VARCHAR) as part_of_speech,
-            CAST(api_response->'$[0]'->'phonetic' AS VARCHAR) as phonetic
-        FROM definitions_raw
-        WHERE status = 'success'
+            lexeme,
+            json_extract_string(def, '$.definition') as definition,
+            part_of_speech,
+            entry_idx,
+            meaning_idx,
+            def_idx
+        FROM defs
+        WHERE json_extract_string(def, '$.definition') IS NOT NULL
     """)
     conn.execute("CREATE INDEX idx_definitions_lexeme ON definitions(lexeme)")
+    conn.execute(
+        "CREATE INDEX idx_definitions_primary ON definitions(lexeme, entry_idx, meaning_idx, def_idx)"
+    )
 
     count = conn.execute("SELECT COUNT(*) FROM definitions").fetchone()[0]
-    print(f"  Materialized {count:,} definitions")
+    unique_words = conn.execute("SELECT COUNT(DISTINCT lexeme) FROM definitions").fetchone()[0]
+    print(f"  Materialized {count:,} definitions for {unique_words:,} words")
 
 
 def store_result(
