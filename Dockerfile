@@ -20,13 +20,21 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
+# Install zstd for decompression (only needed if DB is compressed)
+RUN apt-get update && apt-get install -y --no-install-recommends zstd && rm -rf /var/lib/apt/lists/*
+
 # Copy only what we need from builder
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/backend /app/backend
 COPY --from=builder /app/frontend /app/frontend
 
-# Copy pre-built database (baked into image for instant cold starts)
-COPY backend/data/etymdb.duckdb /app/backend/data/etymdb.duckdb
+# Copy database (compressed or uncompressed) and decompress if needed
+COPY backend/data/etymdb.duckdb* /app/backend/data/
+RUN if [ -f /app/backend/data/etymdb.duckdb.zst ]; then \
+        echo "Decompressing database..." && \
+        zstd -d /app/backend/data/etymdb.duckdb.zst -o /app/backend/data/etymdb.duckdb && \
+        rm /app/backend/data/etymdb.duckdb.zst; \
+    fi
 
 # Use the virtual environment
 ENV PATH="/app/.venv/bin:$PATH"

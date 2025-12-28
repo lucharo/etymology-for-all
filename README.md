@@ -56,7 +56,7 @@ docker run -p 7860:7860 etymology
 
 ## Data Source
 
-Etymology data comes from [EtymDB 2.1](https://github.com/clefourrier/EtymDB-2.0), an open etymological database derived from Wiktionary.
+Etymology data comes from [EtymDB 2.1](https://github.com/clefourrier/EtymDB), an open etymological database derived from Wiktionary.
 
 > Fourrier & Sagot (2020), "Methodological Aspects of Developing and Managing an Etymological Lexical Resource: Introducing EtymDB-2.0", Proceedings of the LREC Conference.
 
@@ -75,6 +75,13 @@ uv run pytest backend/tests -q # Run tests
 ```
 
 Linting (ruff) runs automatically on commit via prek.
+
+## Deploy
+
+```bash
+make hf-deploy  # Deploy to HF Spaces (stages, pushes, squashes history)
+make cf-deploy  # Deploy Cloudflare Worker (custom domain proxy)
+```
 
 ## License
 

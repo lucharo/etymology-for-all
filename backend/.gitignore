@@ -1,4 +1,5 @@
 data/etymdb.duckdb
+data/etymdb.duckdb.zst
 data/etymdb_values.csv
 data/etymdb_links_info.csv
 data/language_codes.json

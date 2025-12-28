@@ -79,6 +79,57 @@ let currentDepth = 5;
 let graphMaxDepth = 10;
 const MIN_DEPTH = 1;
 let searchTimeout = null;
+let serverReady = false;
+
+// Server health check with retry (HF Spaces sleep after inactivity)
+async function checkServerHealth(maxWaitMs = 120000) {
+    const startTime = Date.now();
+    const emptyState = document.getElementById('empty-state');
+    const originalText = emptyState?.querySelector('p')?.textContent;
+    let attempt = 0;
+
+    while (Date.now() - startTime < maxWaitMs) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+
+            const response = await fetch('/health', { signal: controller.signal });
+            clearTimeout(timeout);
+
+            if (response.ok) {
+                // Server is ready
+                if (emptyState?.querySelector('p')) {
+                    emptyState.querySelector('p').textContent = originalText || 'Search for a word to see its etymological journey.';
+                }
+                serverReady = true;
+                return true;
+            }
+        } catch (e) {
+            // Server not ready yet
+        }
+
+        attempt++;
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        const remaining = Math.round((maxWaitMs - (Date.now() - startTime)) / 1000);
+
+        if (emptyState?.querySelector('p')) {
+            emptyState.querySelector('p').innerHTML =
+                `<span style="color: var(--accent);">Server waking up...</span><br>` +
+                `<small style="color: var(--text-muted);">Free tier sleeps after inactivity. Please wait (~${remaining}s remaining)</small>`;
+        }
+
+        // Wait before retry (1s, then 2s intervals)
+        await new Promise(r => setTimeout(r, attempt === 1 ? 1000 : 2000));
+    }
+
+    // Timeout reached
+    if (emptyState?.querySelector('p')) {
+        emptyState.querySelector('p').innerHTML =
+            `<span style="color: var(--error);">Server unavailable</span><br>` +
+            `<small>Please try refreshing the page.</small>`;
+    }
+    return false;
+}
 
 // Expand handlers
 const { toggleExpandGraph, minimizeGraph, getIsExpanded } = createExpandHandlers(
@@ -180,7 +231,10 @@ function selectSuggestion(word) {
 }
 
 // Initialize on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check server health first (HF Spaces may be sleeping)
+    checkServerHealth(120000); // 2 minutes max wait, runs in background
+
     // Initialize Cytoscape
     initCytoscape(
         elements.cyContainer,

@@ -370,6 +370,6 @@ Merged the improved backend implementation:
 - **Modern Python packaging** with `uv` and `pyproject.toml`
 
 ### Data Source
-[EtymDB 2.1](https://github.com/clefourrier/EtymDB-2.0) - open etymological database derived from Wiktionary.
+[EtymDB 2.1](https://github.com/clefourrier/EtymDB) - open etymological database derived from Wiktionary.
 
 > Fourrier & Sagot (2020), "Methodological Aspects of Developing and Managing an Etymological Lexical Resource"
