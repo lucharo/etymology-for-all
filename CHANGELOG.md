@@ -4,6 +4,17 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## v0.11.0 - Bug Fixes and Improvements (2025-12-25)
+
+Small bug fixes and improvements to backend, UI, and documentation.
+
+### Data Enrichment
+- **Re-fetched definitions** for 8,972 newly accessible compound words
+- Added 2,397 new definitions (73% were morphemes not in Free Dictionary)
+- Total definitions now: 23,774
+
+---
+
 ## v0.10.0 - Compound Etymology Support (2024-12-25) 🎄
 
 ### Critical Discovery: "Broken Links" Were Compound Etymologies!
@@ -373,3 +384,4 @@ Merged the improved backend implementation:
 [EtymDB 2.1](https://github.com/clefourrier/EtymDB) - open etymological database derived from Wiktionary.
 
 > Fourrier & Sagot (2020), "Methodological Aspects of Developing and Managing an Etymological Lexical Resource"
+
