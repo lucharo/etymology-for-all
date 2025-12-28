@@ -935,6 +935,99 @@ button:active {
     color: var(--accent);
 }
 
+/* View toggle buttons */
+.view-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--border);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.view-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.view-btn:hover {
+    color: var(--text);
+}
+
+.view-btn.active {
+    background: white;
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.view-btn svg {
+    flex-shrink: 0;
+}
+
+/* Tree view container */
+.tree-view {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: auto;
+    padding: var(--space-md);
+    background: white;
+}
+
+.tree-view.hidden {
+    display: none;
+}
+
+.tree-content {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    white-space: pre;
+}
+
+.tree-line {
+    display: block;
+}
+
+.tree-node {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+
+.tree-node:hover {
+    background: var(--accent-light);
+}
+
+.tree-word {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    color: var(--text);
+}
+
+.tree-lang {
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.8em;
+}
+
+.tree-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: var(--space-xl);
+}
+
 /* Footer */
 footer {
     text-align: center;
@@ -994,9 +1087,21 @@ footer a:hover {
 
     .graph-options {
         margin-bottom: var(--space-xs);
+        flex-wrap: wrap;
+    }
+
+    .view-toggle {
+        order: -1;
+        width: 100%;
+        justify-content: center;
+        margin-bottom: var(--space-xs);
     }
 
     .depth-control {
+        font-size: 0.75rem;
+    }
+
+    .tree-content {
         font-size: 0.75rem;
     }
 

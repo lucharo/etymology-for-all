@@ -72,6 +72,28 @@
 
         <!-- Graph options -->
         <div id="graph-options" class="graph-options hidden">
+            <div class="view-toggle">
+                <button id="view-graph" class="view-btn active" title="Graph view">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <circle cx="19" cy="5" r="2"></circle>
+                        <circle cx="5" cy="19" r="2"></circle>
+                        <circle cx="5" cy="5" r="2"></circle>
+                        <line x1="12" y1="9" x2="12" y2="5"></line>
+                        <line x1="6.5" y1="17.5" x2="9.5" y2="14.5"></line>
+                        <line x1="17.5" y1="6.5" x2="14.5" y2="9.5"></line>
+                    </svg>
+                    Graph
+                </button>
+                <button id="view-tree" class="view-btn" title="Tree view">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3v18"></path>
+                        <path d="M5 8h14"></path>
+                        <path d="M5 16h14"></path>
+                    </svg>
+                    Tree
+                </button>
+            </div>
             <div class="depth-control">
                 <span class="depth-label">Depth:</span>
                 <button id="depth-minus" class="depth-btn" title="Decrease depth">−</button>
@@ -112,6 +134,9 @@
                 <p id="error-message"></p>
             </div>
             <div id="cy"></div>
+
+            <!-- Tree view (alternative to graph) -->
+            <div id="tree-view" class="tree-view hidden"></div>
 
             <!-- Graph legend -->
             <div class="graph-legend hidden" id="graph-legend">

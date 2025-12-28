@@ -33,6 +33,7 @@ import {
     createExpandHandlers,
     setupModal,
 } from './ui.js';
+import { buildTree, renderTreeHTML } from './tree.js';
 
 // DOM elements
 const elements = {
@@ -70,6 +71,9 @@ const elements = {
     statEdges: document.getElementById('stat-edges'),
     statLangs: document.getElementById('stat-langs'),
     statDepth: document.getElementById('stat-depth'),
+    viewGraphBtn: document.getElementById('view-graph'),
+    viewTreeBtn: document.getElementById('view-tree'),
+    treeView: document.getElementById('tree-view'),
 };
 
 // State
@@ -80,6 +84,7 @@ let graphMaxDepth = 10;
 const MIN_DEPTH = 1;
 let searchTimeout = null;
 let serverReady = false;
+let currentView = 'graph'; // 'graph' or 'tree'
 
 // Server health check with retry (HF Spaces sleep after inactivity)
 async function checkServerHealth(maxWaitMs = 120000) {
@@ -137,6 +142,70 @@ const { toggleExpandGraph, minimizeGraph, getIsExpanded } = createExpandHandlers
     elements.graphBackdrop
 );
 
+// View toggle
+function setView(view) {
+    currentView = view;
+
+    // Update button states
+    if (elements.viewGraphBtn) {
+        elements.viewGraphBtn.classList.toggle('active', view === 'graph');
+    }
+    if (elements.viewTreeBtn) {
+        elements.viewTreeBtn.classList.toggle('active', view === 'tree');
+    }
+
+    // Toggle visibility
+    if (view === 'tree') {
+        elements.cyContainer.classList.add('hidden');
+        elements.treeView.classList.remove('hidden');
+        if (elements.directionIndicator) {
+            elements.directionIndicator.classList.add('hidden');
+        }
+        renderTreeView();
+    } else {
+        elements.treeView.classList.add('hidden');
+        elements.cyContainer.classList.remove('hidden');
+        // Re-render graph to update layout
+        if (fullGraphData && currentSearchedWord) {
+            const cy = getCy();
+            if (cy) {
+                cy.resize();
+                cy.fit();
+            }
+        }
+    }
+}
+
+// Render tree view
+function renderTreeView() {
+    if (!fullGraphData || !currentSearchedWord) {
+        elements.treeView.innerHTML = '<div class="tree-empty">Search for a word to see its etymology tree</div>';
+        return;
+    }
+
+    // Filter data by current depth first
+    const displayData = filterGraphByDepth(fullGraphData, currentDepth, currentSearchedWord);
+
+    const tree = buildTree(displayData.nodes, displayData.edges, currentSearchedWord, currentDepth);
+    const treeHTML = renderTreeHTML(tree);
+    elements.treeView.innerHTML = treeHTML;
+
+    // Add click handlers for tree nodes
+    elements.treeView.querySelectorAll('.tree-node').forEach(node => {
+        node.addEventListener('click', () => {
+            const data = {
+                word: node.dataset.lexeme,
+                lang: node.dataset.lang,
+                langName: node.dataset.langName,
+                sense: node.dataset.sense || null,
+                family: node.dataset.family || null,
+                branch: node.dataset.branch || null,
+            };
+            showNodeDetail(data, elements);
+        });
+    });
+}
+
 // Render graph with current depth
 function renderGraph(data, searchedWord, filterByDepth = true) {
     if (!data.nodes || data.nodes.length === 0) {
@@ -174,6 +243,11 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
         const graphDepth = calculateGraphDepth(searchedWord);
         updateStats(displayData.nodes.length, displayData.edges.length, langCounts.size, graphDepth, elements);
     }, 50);
+
+    // Update tree view if in tree mode
+    if (currentView === 'tree') {
+        renderTreeView();
+    }
 }
 
 // Search handler
@@ -286,6 +360,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const isHidden = elements.statsPanel.classList.toggle('hidden');
             elements.statsToggle.classList.toggle('active', !isHidden);
         });
+    }
+
+    // View toggle buttons
+    if (elements.viewGraphBtn) {
+        elements.viewGraphBtn.addEventListener('click', () => setView('graph'));
+    }
+    if (elements.viewTreeBtn) {
+        elements.viewTreeBtn.addEventListener('click', () => setView('tree'));
     }
 
     // Expand button
