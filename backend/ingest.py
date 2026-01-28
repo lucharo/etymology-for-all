@@ -109,6 +109,7 @@ def main() -> None:
         conn.execute("CREATE INDEX idx_links_source ON links(source)")
         conn.execute("CREATE INDEX idx_links_target ON links(target)")
         conn.execute("CREATE INDEX idx_sequences_seq_ix ON sequences(seq_ix)")
+        conn.execute("CREATE INDEX idx_sequences_parent_ix ON sequences(parent_ix)")
 
         # ============================================================
         # Gold Layer: Macros, Views, and Reference Tables

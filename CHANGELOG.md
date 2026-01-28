@@ -4,14 +4,29 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
-## v0.11.0 - Bug Fixes and Improvements (2025-12-25)
+## v0.11.0 - Bug Fixes and Improvements (2026-01-28)
 
 Small bug fixes and improvements to backend, UI, and documentation.
 
-### Data Enrichment
+### Backend
+- **102,734 total definitions** extracted from Free Dictionary API responses (was 21,256)
+- New schema with `entry_idx`, `meaning_idx`, `def_idx` columns for precise definition lookup
+- Updated `materialize_definitions()` for JSON array expansion
 - **Re-fetched definitions** for 8,972 newly accessible compound words
 - Added 2,397 new definitions (73% were morphemes not in Free Dictionary)
-- Total definitions now: 23,774
+
+### UI
+- Search autocomplete shows "(+N more)" indicator for polysemous words
+- **Tree view** alternative to graph visualization
+  - Toggle between Graph and Tree views with buttons
+  - Unicode box-drawing characters for tree structure
+  - Click any node in tree to see definition panel
+- **Dice icon** for random button (replaces abstract cube for better clarity)
+
+### Documentation
+- **PR changelog check** - GitHub Action verifies CHANGELOG.md is updated in PRs
+- Add `skip-changelog` label to bypass for non-user-facing changes
+- **Expanded Glossary** with new terms: Etymology, Compound Etymology, Morpheme, Proto-language
 
 ---
 

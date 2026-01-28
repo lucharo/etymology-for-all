@@ -78,9 +78,10 @@ def _get_language_families(conn) -> dict[str, dict[str, str]]:
 
 
 def _get_definitions_for_lexemes(conn, lexemes: list[str]) -> dict[str, str]:
-    """Fetch definitions only for the specified lexemes.
+    """Fetch primary definitions for the specified lexemes.
 
     Returns dict mapping lowercase lexeme -> definition string.
+    Uses the first definition (entry_idx=0, meaning_idx=0, def_idx=0).
     """
     if not lexemes:
         return {}
@@ -90,7 +91,9 @@ def _get_definitions_for_lexemes(conn, lexemes: list[str]) -> dict[str, str]:
             f"""
             SELECT lexeme, definition
             FROM definitions
-            WHERE lexeme IN ({placeholders}) AND definition IS NOT NULL
+            WHERE lexeme IN ({placeholders})
+              AND definition IS NOT NULL
+              AND entry_idx = 0 AND meaning_idx = 0 AND def_idx = 0
             """,
             [lex.lower() for lex in lexemes],
         ).fetchall()
@@ -281,6 +284,8 @@ def fetch_random_word(include_compound: bool = True) -> dict[str, str | None]:
                          If False, only return words with "deep" etymology chains.
     """
     view = "v_english_curated" if include_compound else "v_english_deep"
+    # Guard against SQL injection (view name is interpolated)
+    assert view in ("v_english_curated", "v_english_deep"), f"Invalid view: {view}"
     with _ConnectionManager() as conn:
         row = conn.execute(f"SELECT lexeme FROM {view} ORDER BY random() LIMIT 1").fetchone()
         return {"word": row[0] if row else None}
@@ -333,22 +338,29 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
     from lexeme, otherwise falls back to Free Dictionary definition.
     When multiple senses exist for a word, shows all of them.
 
-    KEY ASSUMPTION: When sense equals lexeme (not useful), we use the FIRST
-    definition from Free Dictionary API, assuming it's the primary/main meaning.
-    This may not be accurate for polysemous words with distinct etymologies
-    (e.g., "bank" as financial institution vs. river bank). There is no shared
-    identifier between EtymDB and Free Dictionary to enable precise matching.
+    For words with multiple Free Dictionary definitions, shows the primary
+    definition with a count indicator (e.g., "+3 more").
+
+    TODO: The subquery for def_count could be optimized by pre-computing
+    definition counts into a materialized column or separate table. This
+    would require a schema change to the definitions table.
     """
     if not query or len(query) < 2:
         return []
 
     with _ConnectionManager() as conn:
-        # Single query with JOIN (definitions.lexeme is lowercase for fast equality)
+        # Get primary definitions (entry=0, meaning=0, def=0) with total count
         rows = conn.execute(
             """
-            SELECT w.lexeme, w.sense, d.definition
+            SELECT w.lexeme, w.sense, d.definition, d.part_of_speech, dc.def_count
             FROM v_english_curated w
             LEFT JOIN definitions d ON d.lexeme = lower(w.lexeme)
+                AND d.entry_idx = 0 AND d.meaning_idx = 0 AND d.def_idx = 0
+            LEFT JOIN (
+                SELECT lexeme, COUNT(*) as def_count
+                FROM definitions
+                GROUP BY lexeme
+            ) dc ON dc.lexeme = lower(w.lexeme)
             WHERE lower(w.lexeme) LIKE lower(?) || '%'
             ORDER BY
                 CASE WHEN lower(w.lexeme) = lower(?) THEN 0 ELSE 1 END,
@@ -360,16 +372,16 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
         ).fetchall()
 
         # Group by lexeme to handle duplicates
-        seen_lexemes: dict[str, list[tuple]] = {}  # lexeme -> [(sense, definition), ...]
-        for lexeme, sense, definition in rows:
+        seen_lexemes: dict[str, list[tuple]] = {}
+        for lexeme, sense, definition, pos, def_count in rows:
             if lexeme not in seen_lexemes:
                 seen_lexemes[lexeme] = []
-            seen_lexemes[lexeme].append((sense, definition))
+            seen_lexemes[lexeme].append((sense, definition, pos, def_count or 0))
 
         # Build results
         results = []
         for lexeme, entries in seen_lexemes.items():
-            useful_senses = [s for s, _ in entries if _is_useful_sense(s, lexeme)]
+            useful_senses = [s for s, _, _, _ in entries if _is_useful_sense(s, lexeme)]
 
             if useful_senses:
                 # Show all entries with useful senses
@@ -377,9 +389,15 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
                     display = _format_sense_for_display(sense)
                     results.append({"word": lexeme, "sense": display})
             else:
-                # No useful senses - show one entry with Free Dictionary definition
-                definition = entries[0][1]  # First entry's definition
+                # No useful senses - show Free Dictionary definition with count
+                _, definition, pos, def_count = entries[0]
                 display = definition.strip('"') if definition else None
+
+                # Add count indicator for polysemous words
+                if display and def_count > 1:
+                    pos_str = f"({pos}) " if pos else ""
+                    display = f"{pos_str}{display} (+{def_count - 1} more)"
+
                 results.append({"word": lexeme, "sense": display})
 
             if len(results) >= limit:
