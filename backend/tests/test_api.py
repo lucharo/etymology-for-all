@@ -133,17 +133,25 @@ def _prepare_test_database() -> None:
             )
         """)
 
-        # Definitions table (lexeme is lowercase for fast equality joins)
+        # Definitions table with all definitions (not just first)
+        # Schema matches materialize_definitions() in enrich_definitions.py
         conn.execute("""
             CREATE TABLE definitions (
-                lexeme VARCHAR PRIMARY KEY,
+                lexeme VARCHAR,
                 definition VARCHAR,
                 part_of_speech VARCHAR,
-                phonetic VARCHAR
+                entry_idx INT,
+                meaning_idx INT,
+                def_idx INT
             )
         """)
+        conn.execute("CREATE INDEX idx_definitions_lexeme ON definitions(lexeme)")
+        conn.execute(
+            "CREATE INDEX idx_definitions_primary ON definitions(lexeme, entry_idx, meaning_idx, def_idx)"
+        )
+        # Insert test definitions - primary definition (entry=0, meaning=0, def=0)
         conn.execute("""
-            INSERT INTO definitions VALUES ('mother', 'A female parent', 'noun', NULL)
+            INSERT INTO definitions VALUES ('mother', 'A female parent', 'noun', 0, 0, 0)
         """)
 
 

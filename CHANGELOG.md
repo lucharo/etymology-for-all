@@ -8,6 +8,14 @@ Human-readable history of the Etymology Graph Explorer.
 
 Small bug fixes and improvements to backend, UI, and documentation.
 
+### Backend
+- **102,734 total definitions** extracted from Free Dictionary API responses (was 21,256)
+- New schema with `entry_idx`, `meaning_idx`, `def_idx` columns for precise definition lookup
+- Updated `materialize_definitions()` for JSON array expansion
+
+### UI
+- Search autocomplete shows "(+N more)" indicator for polysemous words
+
 ### Documentation
 - **PR changelog check** - GitHub Action verifies CHANGELOG.md is updated in PRs
 - Add `skip-changelog` label to bypass for non-user-facing changes
