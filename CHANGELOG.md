@@ -16,6 +16,10 @@ Small bug fixes and improvements to backend, UI, and documentation.
 ### UI
 - Search autocomplete shows "(+N more)" indicator for polysemous words
 
+### Documentation
+- **PR changelog check** - GitHub Action verifies CHANGELOG.md is updated in PRs
+- Add `skip-changelog` label to bypass for non-user-facing changes
+
 ---
 
 ## v0.10.0 - Compound Etymology Support (2024-12-25) 🎄
