@@ -15,6 +15,10 @@ Small bug fixes and improvements to backend, UI, and documentation.
 
 ### UI
 - Search autocomplete shows "(+N more)" indicator for polysemous words
+- **Tree view** alternative to graph visualization
+  - Toggle between Graph and Tree views with buttons
+  - Unicode box-drawing characters for tree structure
+  - Click any node in tree to see definition panel
 
 ### Documentation
 - **PR changelog check** - GitHub Action verifies CHANGELOG.md is updated in PRs
