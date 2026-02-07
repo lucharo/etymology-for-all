@@ -25,8 +25,10 @@ except ImportError:
 
 try:
     from .database import database_path
+    from .sql_loader import load_sql
 except ImportError:
     from database import database_path
+    from sql_loader import load_sql
 
 API_BASE = "https://api.dictionaryapi.dev/api/v2/entries/en"
 DELAY_MS = 300  # Delay between requests
@@ -68,35 +70,20 @@ async def fetch_definition(
 def get_words_to_enrich(conn: duckdb.DuckDBPyConnection) -> list[str]:
     """Get curated English words that haven't been enriched yet."""
     tables = conn.execute(
-        "SELECT table_name FROM information_schema.tables WHERE table_name = 'definitions_raw'"
+        load_sql("enrichment/check_table_exists.sql"), ["definitions_raw"]
     ).fetchall()
 
     if not tables:
-        rows = conn.execute(
-            "SELECT DISTINCT lexeme FROM v_english_curated ORDER BY lexeme"
-        ).fetchall()
+        rows = conn.execute(load_sql("enrichment/words_to_enrich_initial.sql")).fetchall()
     else:
-        rows = conn.execute("""
-            SELECT DISTINCT c.lexeme
-            FROM v_english_curated c
-            LEFT JOIN definitions_raw d ON c.lexeme = d.lexeme
-            WHERE d.lexeme IS NULL
-            ORDER BY c.lexeme
-        """).fetchall()
+        rows = conn.execute(load_sql("enrichment/words_to_enrich.sql")).fetchall()
 
     return [row[0] for row in rows]
 
 
 def ensure_definitions_table(conn: duckdb.DuckDBPyConnection) -> None:
     """Create definitions_raw table if it doesn't exist."""
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS definitions_raw (
-            lexeme VARCHAR PRIMARY KEY,
-            api_response JSON,
-            fetched_at TIMESTAMP,
-            status VARCHAR
-        )
-    """)
+    conn.execute(load_sql("ingestion/09_create_definitions_raw.sql"))
 
 
 def materialize_definitions(conn: duckdb.DuckDBPyConnection) -> None:
@@ -110,47 +97,13 @@ def materialize_definitions(conn: duckdb.DuckDBPyConnection) -> None:
     Lexeme is stored lowercase for fast equality joins.
     """
     print("Materializing definitions table...")
-    conn.execute("DROP TABLE IF EXISTS definitions")
-    conn.execute("DROP VIEW IF EXISTS v_definitions")  # Remove legacy view
-    conn.execute("""
-        CREATE TABLE definitions AS
-        WITH entries AS (
-            SELECT
-                lower(lexeme) as lexeme,
-                unnest(from_json(api_response, '["json"]')) as entry,
-                generate_subscripts(from_json(api_response, '["json"]'), 1) - 1 as entry_idx
-            FROM definitions_raw
-            WHERE status = 'success'
-        ),
-        meanings AS (
-            SELECT
-                lexeme, entry_idx,
-                unnest(from_json(json_extract(entry, '$.meanings'), '["json"]')) as meaning,
-                generate_subscripts(from_json(json_extract(entry, '$.meanings'), '["json"]'), 1) - 1 as meaning_idx
-            FROM entries
-        ),
-        defs AS (
-            SELECT
-                lexeme, entry_idx, meaning_idx,
-                json_extract_string(meaning, '$.partOfSpeech') as part_of_speech,
-                unnest(from_json(json_extract(meaning, '$.definitions'), '["json"]')) as def,
-                generate_subscripts(from_json(json_extract(meaning, '$.definitions'), '["json"]'), 1) - 1 as def_idx
-            FROM meanings
-        )
-        SELECT
-            lexeme,
-            json_extract_string(def, '$.definition') as definition,
-            part_of_speech,
-            entry_idx,
-            meaning_idx,
-            def_idx
-        FROM defs
-        WHERE json_extract_string(def, '$.definition') IS NOT NULL
-    """)
-    conn.execute("CREATE INDEX idx_definitions_lexeme ON definitions(lexeme)")
-    conn.execute(
-        "CREATE INDEX idx_definitions_primary ON definitions(lexeme, entry_idx, meaning_idx, def_idx)"
-    )
+    for stmt in load_sql("enrichment/materialize_definitions.sql").strip().split(";"):
+        if stmt.strip():
+            conn.execute(stmt)
+
+    for stmt in load_sql("enrichment/create_definition_indexes.sql").strip().split(";"):
+        if stmt.strip():
+            conn.execute(stmt)
 
     count = conn.execute("SELECT COUNT(*) FROM definitions").fetchone()[0]
     unique_words = conn.execute("SELECT COUNT(DISTINCT lexeme) FROM definitions").fetchone()[0]
@@ -236,7 +189,7 @@ def get_stats() -> None:
 
     with duckdb.connect(db_path.as_posix(), read_only=True) as conn:
         tables = conn.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_name = 'definitions_raw'"
+            load_sql("enrichment/check_table_exists.sql"), ["definitions_raw"]
         ).fetchall()
 
         if not tables:
@@ -246,9 +199,7 @@ def get_stats() -> None:
         total_curated = conn.execute(
             "SELECT COUNT(DISTINCT lexeme) FROM v_english_curated"
         ).fetchone()[0]
-        stats = conn.execute(
-            "SELECT status, COUNT(*) FROM definitions_raw GROUP BY status"
-        ).fetchall()
+        stats = conn.execute(load_sql("enrichment/enrichment_stats.sql")).fetchall()
 
         total_enriched = sum(s[1] for s in stats)
         remaining = total_curated - total_enriched

@@ -10,8 +10,10 @@ import duckdb
 
 try:  # Local execution vs. package import
     from .download_data import DATA_DIR, download
+    from .sql_loader import load_sql
 except ImportError:  # pragma: no cover - fallback for direct execution
     from download_data import DATA_DIR, download
+    from sql_loader import load_sql
 
 DEFAULT_DB_PATH = DATA_DIR / "etymdb.duckdb"
 DEFAULT_VALUES = DATA_DIR / "etymdb_values.csv"
@@ -40,55 +42,14 @@ def main() -> None:
     _ensure_csvs()
 
     with duckdb.connect(DB_PATH.as_posix()) as conn:
-        conn.execute("DROP TABLE IF EXISTS words")
-        conn.execute("DROP TABLE IF EXISTS links")
-        conn.execute("DROP TABLE IF EXISTS sequences")
+        # Drop and recreate core tables
+        for stmt in load_sql("ingestion/01_drop_tables.sql").strip().split(";"):
+            if stmt.strip():
+                conn.execute(stmt)
 
-        conn.execute(
-            """
-            CREATE TABLE words AS
-            SELECT
-                word_ix::BIGINT AS word_ix,
-                lang,
-                lexeme,
-                sense
-            FROM read_csv_auto(?, delim='\t', header=false, columns={
-                'word_ix': 'BIGINT',
-                'lang': 'VARCHAR',
-                'dummy': 'INTEGER',
-                'lexeme': 'VARCHAR',
-                'sense': 'VARCHAR'
-            })
-            """,
-            [VALUES_CSV.as_posix()],
-        )
-
-        conn.execute(
-            """
-            CREATE TABLE links AS
-            SELECT
-                type,
-                source::BIGINT AS source,
-                target::BIGINT AS target
-            FROM read_csv_auto(?, delim='\t', header=false, columns={
-                'type': 'VARCHAR',
-                'source': 'BIGINT',
-                'target': 'BIGINT'
-            })
-            """,
-            [LINKS_CSV.as_posix()],
-        )
-
-        # Lexeme sequences table: maps negative IDs to compound etymologies
-        # Each sequence links a negative ID to one or more parent words
-        # Some compounds have 3+ components, so we normalize to (seq_ix, position, parent_ix)
-        conn.execute("""
-            CREATE TABLE sequences (
-                seq_ix BIGINT,
-                position INT,
-                parent_ix BIGINT
-            )
-        """)
+        conn.execute(load_sql("ingestion/02_create_words.sql"), [VALUES_CSV.as_posix()])
+        conn.execute(load_sql("ingestion/03_create_links.sql"), [LINKS_CSV.as_posix()])
+        conn.execute(load_sql("ingestion/04_create_sequences.sql"))
 
         # Parse and insert sequences (handles variable-length rows)
         with open(LINKS_INDEX_CSV, encoding="utf-8") as f:
@@ -104,66 +65,21 @@ def main() -> None:
                             [seq_ix, position, int(parent)],
                         )
 
-        conn.execute("CREATE INDEX idx_words_word_ix ON words(word_ix)")
-        conn.execute("CREATE INDEX idx_words_lexeme ON words(lexeme)")
-        conn.execute("CREATE INDEX idx_links_source ON links(source)")
-        conn.execute("CREATE INDEX idx_links_target ON links(target)")
-        conn.execute("CREATE INDEX idx_sequences_seq_ix ON sequences(seq_ix)")
-        conn.execute("CREATE INDEX idx_sequences_parent_ix ON sequences(parent_ix)")
+        # Create indexes
+        for stmt in load_sql("ingestion/05_create_indexes.sql").strip().split(";"):
+            if stmt.strip():
+                conn.execute(stmt)
 
-        # ============================================================
         # Gold Layer: Macros, Views, and Reference Tables
-        # ============================================================
+        for stmt in load_sql("ingestion/06_create_macros.sql").strip().split(";"):
+            if stmt.strip():
+                conn.execute(stmt)
 
-        # Macros for reusable filtering conditions
-        conn.execute("""
-            CREATE OR REPLACE MACRO is_phrase(lexeme) AS
-                lexeme LIKE '% %'
-        """)
-        conn.execute("""
-            CREATE OR REPLACE MACRO is_proper_noun(lexeme) AS
-                regexp_matches(lexeme, '^[A-Z][a-z]')
-        """)
-        conn.execute("""
-            CREATE OR REPLACE MACRO is_clean_word(lexeme) AS
-                NOT is_phrase(lexeme) AND NOT is_proper_noun(lexeme)
-        """)
-        conn.execute("""
-            CREATE OR REPLACE MACRO has_etymology(word_ix) AS
-                word_ix IN (SELECT DISTINCT source FROM links)
-        """)
-
-        # Curated view: English words with etymology, no phrases/proper nouns
-        # Filter out sense=NULL entries which are often garbage (e.g., suffix entries
-        # like "-er" with corrupted links to unrelated words like "asteroid belt")
-        # Paper notes 40% of EtymDB lacks glosses; our curated set is 99% with sense
-        conn.execute("""
-            CREATE OR REPLACE VIEW v_english_curated AS
-            SELECT DISTINCT w.*
-            FROM words w
-            JOIN links l ON w.word_ix = l.source
-            WHERE w.lang = 'en'
-              AND is_clean_word(w.lexeme)
-              AND w.sense IS NOT NULL
-        """)
-
-        # View for words with "deep" etymology (at least one link to a real word)
-        # Excludes compound-only words where all links point to sequences (negative IDs)
-        # Also excludes sense=NULL entries (same rationale as v_english_curated)
-        conn.execute("""
-            CREATE OR REPLACE VIEW v_english_deep AS
-            SELECT DISTINCT w.*
-            FROM words w
-            JOIN links l ON w.word_ix = l.source
-            WHERE w.lang = 'en'
-              AND is_clean_word(w.lexeme)
-              AND w.sense IS NOT NULL
-              AND l.target > 0
-        """)
+        for stmt in load_sql("ingestion/07_create_views.sql").strip().split(";"):
+            if stmt.strip():
+                conn.execute(stmt)
 
         # Language families reference table
-        # Load from language_codes.json (2400+ language code mappings)
-        # Run `python -m backend.download_language_codes` to generate this file
         language_codes_path = DATA_DIR / "language_codes.json"
         if not language_codes_path.exists():
             raise FileNotFoundError(
@@ -171,15 +87,9 @@ def main() -> None:
                 "Run `python -m backend.download_language_codes` first."
             )
 
-        conn.execute("DROP TABLE IF EXISTS language_families")
-        conn.execute("""
-            CREATE TABLE language_families (
-                lang_code VARCHAR PRIMARY KEY,
-                lang_name VARCHAR,
-                family VARCHAR,
-                branch VARCHAR
-            )
-        """)
+        for stmt in load_sql("ingestion/08_create_language_families.sql").strip().split(";"):
+            if stmt.strip():
+                conn.execute(stmt)
 
         with open(language_codes_path, encoding="utf-8") as f:
             language_data = json.load(f)
@@ -194,20 +104,8 @@ def main() -> None:
                 ],
             )
 
-        # ============================================================
-        # Definition Enrichment Tables
-        # ============================================================
-
-        # Table to store raw API responses from Free Dictionary API
-        # After enrichment, run --materialize to create the `definitions` table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS definitions_raw (
-                lexeme VARCHAR PRIMARY KEY,
-                api_response JSON,
-                fetched_at TIMESTAMP,
-                status VARCHAR
-            )
-        """)
+        # Definition enrichment tables
+        conn.execute(load_sql("ingestion/09_create_definitions_raw.sql"))
 
 
 if __name__ == "__main__":  # pragma: no cover - manual utility

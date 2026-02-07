@@ -54,7 +54,7 @@ main {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: var(--space-lg);
+    padding: var(--space-sm) var(--space-lg) var(--space-lg);
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
@@ -72,6 +72,7 @@ h1 {
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--text);
+    margin-top: 0;
 }
 
 .subtitle {
@@ -146,24 +147,46 @@ h1 {
     color: var(--text);
 }
 
-.compound-control {
+/* Settings popover */
+.settings-wrapper {
+    position: relative;
+}
+
+.settings-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: var(--space-sm);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 20;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.settings-option {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
     font-size: 0.8rem;
     color: var(--text-muted);
     cursor: pointer;
-    user-select: none;
+    padding: 4px 0;
+    white-space: nowrap;
 }
 
-.compound-control input[type="checkbox"] {
+.settings-option input[type="checkbox"] {
     width: 14px;
     height: 14px;
     cursor: pointer;
     accent-color: var(--accent);
 }
 
-.compound-control:hover {
+.settings-option:hover {
     color: var(--text);
 }
 
@@ -412,6 +435,43 @@ button:active {
 
 #error-state {
     color: #dc2626;
+}
+
+/* Error action buttons */
+.error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    justify-content: center;
+    margin-top: var(--space-md);
+}
+
+.error-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.error-action-btn:hover {
+    background: var(--accent-light);
+    border-color: var(--accent);
+}
+
+.error-action-report {
+    color: var(--text-muted);
+}
+
+.error-action-report:hover {
+    color: var(--text);
 }
 
 .hidden {
@@ -762,18 +822,45 @@ button:active {
     background: var(--accent);
 }
 
+.legend-line.link-inh {
+    background: #059669;
+}
+
+.legend-line.link-bor {
+    background: #d97706;
+}
+
+.legend-line.link-der {
+    background: #7c3aed;
+}
+
+.legend-line.link-cog {
+    background: #0284c7;
+}
+
+.legend-line.link-cmpd {
+    background: #0c4a6e;
+}
+
 /* Header buttons */
 .header-buttons {
     position: absolute;
-    top: 0;
+    top: 0.15em;
     right: 0;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto;
     gap: var(--space-xs);
+    justify-items: end;
+}
+
+.header-buttons .settings-wrapper {
+    grid-column: 2;
 }
 
 .header-btn {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-xs);
     padding: var(--space-xs) var(--space-sm);
     font-size: 0.875rem;
@@ -938,24 +1025,18 @@ button:active {
 /* View toggle buttons */
 .view-toggle {
     display: flex;
-    gap: 2px;
-    background: var(--border);
-    border-radius: 6px;
-    padding: 2px;
+    align-items: center;
+    gap: 0;
 }
 
 .view-btn {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-xs) var(--space-sm);
+    padding: 2px var(--space-xs);
     font-size: 0.75rem;
     background: transparent;
     border: none;
-    border-radius: 4px;
     color: var(--text-muted);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: color 0.15s ease;
 }
 
 .view-btn:hover {
@@ -963,13 +1044,16 @@ button:active {
 }
 
 .view-btn.active {
-    background: white;
     color: var(--text);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    font-weight: 600;
 }
 
 .view-btn svg {
-    flex-shrink: 0;
+    display: none;
+}
+
+.view-toggle .view-btn + .view-btn {
+    border-left: 1px solid var(--border);
 }
 
 /* Tree view container */
@@ -1045,6 +1129,32 @@ footer a:hover {
     text-decoration: underline;
 }
 
+/* Version details in footer */
+.version-details {
+    margin-top: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.version-details summary {
+    cursor: pointer;
+    user-select: none;
+    display: inline;
+}
+
+.version-details summary:hover {
+    color: var(--text);
+}
+
+.version-content {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+    margin-top: var(--space-xs);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     main {
@@ -1057,7 +1167,7 @@ footer a:hover {
 
     h1 {
         font-size: 1.5rem;
-        padding-right: 70px; /* Space for about button */
+        padding-right: 0;
     }
 
     .subtitle {
@@ -1069,6 +1179,10 @@ footer a:hover {
         font-size: 0.75rem;
     }
 
+    .header-btn .btn-label {
+        display: none;
+    }
+
     .header-btn svg {
         width: 14px;
         height: 14px;
@@ -1078,6 +1192,7 @@ footer a:hover {
     .search-container {
         gap: var(--space-xs);
         margin-bottom: var(--space-xs);
+        flex-wrap: nowrap;
     }
 
     .search-hint {
@@ -1092,7 +1207,6 @@ footer a:hover {
 
     .view-toggle {
         order: -1;
-        width: 100%;
         justify-content: center;
         margin-bottom: var(--space-xs);
     }
@@ -1133,21 +1247,43 @@ footer a:hover {
         flex: 1;
     }
 
-    /* Legend smaller on mobile */
+    /* Legend vertical on mobile */
     .graph-legend {
         font-size: 0.6rem;
         padding: 4px 6px;
         bottom: var(--space-sm);
         left: var(--space-sm);
-        gap: var(--space-xs);
+        gap: 2px;
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .edge-legend {
-        gap: var(--space-xs);
+        gap: 2px;
+        flex-direction: column;
+    }
+
+    .legend-divider {
+        display: none;
     }
 
     .legend-line {
         width: 14px;
+    }
+
+    /* Hide detailed link types on mobile */
+    #edge-legend-detailed {
+        display: none !important;
+    }
+
+    /* Direction indicator vertical on mobile */
+    #direction-indicator {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .direction-arrow {
+        transform: rotate(90deg);
     }
 
     /* Detail panel full width at bottom on mobile */

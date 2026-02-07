@@ -9,7 +9,8 @@ const FETCH_DEPTH = 10;
 export async function fetchEtymology(word) {
     const response = await fetch(`/graph/${encodeURIComponent(word)}?depth=${FETCH_DEPTH}`);
     await handleApiResponse(response, 'etymology lookup');
-    return response.json();
+    const data = await response.json();
+    return data;
 }
 
 export async function fetchRandomWord(includeCompound = true) {

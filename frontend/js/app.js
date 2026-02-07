@@ -3,7 +3,7 @@
  * Interactive visualization of word origins using Cytoscape.js
  */
 
-import { getLangName } from './utils.js';
+import { getLangName, checkNoEtymology } from './utils.js';
 import {
     initCytoscape,
     getCy,
@@ -12,6 +12,7 @@ import {
     calculateMaxGraphDepth,
     calculateGraphDepth,
     renderGraphElements,
+    setShowLinkTypes,
 } from './graph.js';
 import {
     fetchEtymology,
@@ -211,8 +212,21 @@ function renderTreeView() {
 
 // Render graph with current depth
 function renderGraph(data, searchedWord, filterByDepth = true) {
+    // Check for no-etymology response
+    const noEtym = checkNoEtymology(data);
+    if (noEtym) {
+        const word = noEtym.lexeme || searchedWord;
+        showError(
+            `'${word}' was found but has no etymology data in EtymDB`,
+            elements,
+            minimizeGraph,
+            { wiktionaryWord: word, searchedWord: word }
+        );
+        return;
+    }
+
     if (!data.nodes || data.nodes.length === 0) {
-        showError('No etymology data available for this word', elements, minimizeGraph);
+        showError('No etymology data available for this word', elements, minimizeGraph, { searchedWord });
         return;
     }
 
@@ -264,7 +278,7 @@ async function handleSearch() {
         const data = await fetchEtymology(word);
         renderGraph(data, word);
     } catch (err) {
-        showError(err.message, elements, minimizeGraph);
+        showError(err.message, elements, minimizeGraph, { searchedWord: word });
     }
 }
 
@@ -283,7 +297,7 @@ async function handleRandom() {
         const data = await fetchEtymology(word);
         renderGraph(data, word);
     } catch (err) {
-        showError(err.message, elements, minimizeGraph);
+        showError(err.message, elements, minimizeGraph, { searchedWord: elements.wordInput.value.trim() });
     }
 }
 
@@ -428,6 +442,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Settings popover toggle
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsPopover = document.getElementById('settings-popover');
+    if (settingsBtn && settingsPopover) {
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsPopover.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.settings-wrapper')) {
+                settingsPopover.classList.add('hidden');
+            }
+        });
+    }
+
     // Setup modal
     const aboutBtn = document.getElementById('about-btn');
     const aboutModal = document.getElementById('about-modal');
@@ -443,4 +472,46 @@ document.addEventListener('DOMContentLoaded', async () => {
             closeAboutModal();
         }
     });
+
+    // Version info in footer
+    const versionDetails = document.getElementById('version-details');
+    const versionContent = document.getElementById('version-content');
+    const versionSummary = document.getElementById('version-summary');
+    if (versionDetails && versionContent) {
+        async function fetchVersion() {
+            try {
+                const response = await fetch('/version');
+                if (!response.ok) return;
+                const data = await response.json();
+                const version = data.version || 'unknown';
+                const stats = data.db_stats || {};
+                versionSummary.textContent = `v${version}`;
+                versionContent.innerHTML =
+                    `<span>Version: ${version}</span>` +
+                    (stats.words ? `<span>Words: ${stats.words.toLocaleString()}</span>` : '') +
+                    (stats.definitions ? `<span>Definitions: ${stats.definitions.toLocaleString()}</span>` : '');
+            } catch (e) {
+                versionContent.textContent = 'Could not load version info';
+            }
+        }
+        // Fetch on toggle or on load
+        versionDetails.addEventListener('toggle', () => {
+            if (versionDetails.open) fetchVersion();
+        });
+        // Also fetch eagerly so the summary shows the version
+        fetchVersion();
+    }
+
+    // Link types toggle
+    const showLinkTypesCheckbox = document.getElementById('show-link-types');
+    const simpleLegend = document.getElementById('edge-legend-simple');
+    const detailedLegend = document.getElementById('edge-legend-detailed');
+    if (showLinkTypesCheckbox) {
+        showLinkTypesCheckbox.addEventListener('change', () => {
+            const enabled = showLinkTypesCheckbox.checked;
+            setShowLinkTypes(enabled);
+            if (simpleLegend) simpleLegend.classList.toggle('hidden', enabled);
+            if (detailedLegend) detailedLegend.classList.toggle('hidden', !enabled);
+        });
+    }
 });

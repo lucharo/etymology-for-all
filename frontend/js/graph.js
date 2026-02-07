@@ -5,9 +5,48 @@
 import { getLangName, buildNodeLabel } from './utils.js';
 
 let cy = null;
+let showLinkTypes = false;
 
 export function getCy() {
     return cy;
+}
+
+// Link type color mapping
+const LINK_TYPE_COLORS = {
+    inh: '#059669',   // green - inherited
+    bor: '#d97706',   // amber - borrowed
+    der: '#7c3aed',   // purple - derived
+    cog: '#0284c7',   // blue - cognate
+    cmpd: '#0c4a6e',  // dark blue - compound
+};
+
+function getLinkTypeColor(type) {
+    if (!type) return null;
+    // Handle compound types like "cmpd+bor", "der(s)", "der(p)"
+    if (type.startsWith('cmpd')) return LINK_TYPE_COLORS.cmpd;
+    if (type.startsWith('der')) return LINK_TYPE_COLORS.der;
+    return LINK_TYPE_COLORS[type] || null;
+}
+
+export function setShowLinkTypes(value) {
+    showLinkTypes = value;
+    if (!cy) return;
+    cy.edges().forEach(edge => {
+        const type = edge.data('linkType');
+        if (showLinkTypes && type) {
+            const color = getLinkTypeColor(type);
+            if (color) {
+                edge.style('line-color', color);
+                edge.style('target-arrow-color', color);
+            }
+        } else if (edge.data('compound')) {
+            edge.style('line-color', '#0c4a6e');
+            edge.style('target-arrow-color', '#0c4a6e');
+        } else {
+            edge.style('line-color', '#d6d3d1');
+            edge.style('target-arrow-color', '#d6d3d1');
+        }
+    });
 }
 
 export function getLayoutDirection() {
@@ -277,6 +316,9 @@ export function renderGraphElements(displayData, graphLegend, directionIndicator
         if (edge.compound) {
             edgeData.compound = true;
         }
+        if (edge.type) {
+            edgeData.linkType = edge.type;
+        }
         elements.push({
             group: 'edges',
             data: edgeData,
@@ -297,6 +339,20 @@ export function renderGraphElements(displayData, graphLegend, directionIndicator
     }).run();
 
     cy.fit(undefined, 40);
+
+    // Apply link type colors if enabled
+    if (showLinkTypes) {
+        cy.edges().forEach(edge => {
+            const type = edge.data('linkType');
+            if (type) {
+                const color = getLinkTypeColor(type);
+                if (color) {
+                    edge.style('line-color', color);
+                    edge.style('target-arrow-color', color);
+                }
+            }
+        });
+    }
 
     // Show the graph legend container
     if (graphLegend) {

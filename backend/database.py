@@ -8,6 +8,11 @@ from pathlib import Path
 
 import duckdb
 
+try:
+    from .sql_loader import load_sql
+except ImportError:  # pragma: no cover - fallback for direct execution
+    from sql_loader import load_sql
+
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DATA_DIR = BASE_DIR / "data"
 
@@ -71,9 +76,7 @@ def _normalize_depth(depth: int) -> int:
 
 def _get_language_families(conn) -> dict[str, dict[str, str]]:
     """Load language families into a lookup dict."""
-    rows = conn.execute(
-        "SELECT lang_code, lang_name, family, branch FROM language_families"
-    ).fetchall()
+    rows = conn.execute(load_sql("queries/get_language_families.sql")).fetchall()
     return {row[0]: {"name": row[1], "family": row[2], "branch": row[3]} for row in rows}
 
 
@@ -152,6 +155,14 @@ def _build_node(
     return node
 
 
+def get_db_stats() -> dict:
+    """Return row counts for key tables."""
+    with _ConnectionManager() as conn:
+        words = conn.execute("SELECT COUNT(*) FROM v_english_curated").fetchone()[0]
+        definitions = conn.execute("SELECT COUNT(*) FROM definitions").fetchone()[0]
+        return {"words": words, "definitions": definitions}
+
+
 def fetch_etymology(word: str, depth: int = 5) -> dict | None:
     """Return an etymology graph for *word* or ``None`` if absent."""
     if not word:
@@ -164,18 +175,7 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
 
         # Find starting word (prefer English, then most etymology links)
         start = conn.execute(
-            """
-            SELECT w.word_ix, w.lang, w.lexeme, w.sense
-            FROM words w
-            LEFT JOIN links l ON l.source = w.word_ix
-            WHERE lower(w.lexeme) = lower(?)
-            GROUP BY w.word_ix, w.lang, w.lexeme, w.sense
-            ORDER BY
-                CASE WHEN w.lang = 'en' THEN 0 ELSE 1 END,
-                COUNT(l.target) DESC,
-                w.word_ix
-            LIMIT 1
-            """,
+            load_sql("queries/find_start_word.sql"),
             [word],
         ).fetchone()
         if not start:
@@ -193,49 +193,7 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
             # When target < 0, it's a sequence ID that resolves to multiple parent words
             # Track is_compound to style compound edges differently in the UI
             records = conn.execute(
-                """
-                WITH RECURSIVE
-                -- Resolve negative targets through sequences table
-                resolved_links AS (
-                    -- Simple links (positive target = direct word reference)
-                    SELECT source, target AS parent_ix, FALSE AS is_compound
-                    FROM links
-                    WHERE target > 0
-                    UNION ALL
-                    -- Compound links (negative target = sequence, resolve to parents)
-                    SELECT l.source, s.parent_ix, TRUE AS is_compound
-                    FROM links l
-                    JOIN sequences s ON s.seq_ix = l.target
-                    WHERE l.target < 0
-                ),
-                traversal(child_ix, parent_ix, is_compound, lvl) AS (
-                    SELECT source, parent_ix, is_compound, 1
-                    FROM resolved_links
-                    WHERE source = ?
-                    UNION ALL
-                    -- Only follow FROM parents that have valid sense (non-NULL for English)
-                    -- This keeps sense=NULL entries as nodes but doesn't traverse their garbage links
-                    SELECT rl.source, rl.parent_ix, rl.is_compound, lvl + 1
-                    FROM traversal t
-                    JOIN resolved_links rl ON rl.source = t.parent_ix
-                    JOIN words parent_word ON parent_word.word_ix = t.parent_ix
-                    WHERE lvl < ?
-                      AND (parent_word.lang != 'en' OR parent_word.sense IS NOT NULL)
-                )
-                SELECT
-                    child.word_ix AS child_ix,
-                    child.lexeme AS child_lexeme,
-                    child.lang AS child_lang,
-                    child.sense AS child_sense,
-                    parent.word_ix AS parent_ix,
-                    parent.lexeme AS parent_lexeme,
-                    parent.lang AS parent_lang,
-                    parent.sense AS parent_sense,
-                    tr.is_compound
-                FROM traversal tr
-                JOIN words child ON child.word_ix = tr.child_ix
-                JOIN words parent ON parent.word_ix = tr.parent_ix
-                """,
+                load_sql("queries/traverse_etymology.sql"),
                 [start_ix, depth],
             ).fetchall()
 
@@ -243,11 +201,12 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
                 child_ix, child_lexeme, child_lang, child_sense = row[:4]
                 parent_ix, parent_lexeme, parent_lang, parent_sense = row[4:8]
                 is_compound = row[8]
+                link_type = row[9]
 
                 raw_nodes.setdefault(child_ix, (child_lexeme, child_lang, child_sense))
                 raw_nodes.setdefault(parent_ix, (parent_lexeme, parent_lang, parent_sense))
 
-                # Build edges with compound flag for UI styling
+                # Build edges with compound flag and link type for UI styling
                 child_id = _make_node_id(child_lexeme, child_lang)
                 parent_id = _make_node_id(parent_lexeme, parent_lang)
                 if child_id != parent_id:
@@ -257,6 +216,8 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
                         edge = {"source": child_id, "target": parent_id}
                         if is_compound:
                             edge["compound"] = True
+                        if link_type:
+                            edge["type"] = link_type
                         edges.append(edge)
 
         # Fetch definitions only for English lexemes in this graph
@@ -269,9 +230,14 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
             for ix, (lexeme, lang, sense) in raw_nodes.items()
         }
 
-        # Return None if word has no etymology (single node, no edges)
+        # Word exists but has no etymology links
         if not edges:
-            return None
+            return {
+                "nodes": list(nodes.values()),
+                "edges": [],
+                "no_etymology": True,
+                "lexeme": start_lexeme,
+            }
 
         return {"nodes": list(nodes.values()), "edges": edges}
 
@@ -295,7 +261,7 @@ def fetch_language_info(lang_code: str) -> dict[str, str] | None:
     """Return language family info for a language code."""
     with _ConnectionManager() as conn:
         row = conn.execute(
-            "SELECT lang_name, family, branch FROM language_families WHERE lang_code = ?",
+            load_sql("queries/get_language_info.sql"),
             [lang_code],
         ).fetchone()
         if row:
@@ -306,9 +272,7 @@ def fetch_language_info(lang_code: str) -> dict[str, str] | None:
 def fetch_all_language_families() -> dict[str, dict[str, str]]:
     """Return all language family mappings."""
     with _ConnectionManager() as conn:
-        rows = conn.execute(
-            "SELECT lang_code, lang_name, family, branch FROM language_families"
-        ).fetchall()
+        rows = conn.execute(load_sql("queries/get_language_families.sql")).fetchall()
         return {row[0]: {"name": row[1], "family": row[2], "branch": row[3]} for row in rows}
 
 
@@ -351,23 +315,7 @@ def search_words(query: str, limit: int = 10) -> list[dict[str, str]]:
     with _ConnectionManager() as conn:
         # Get primary definitions (entry=0, meaning=0, def=0) with total count
         rows = conn.execute(
-            """
-            SELECT w.lexeme, w.sense, d.definition, d.part_of_speech, dc.def_count
-            FROM v_english_curated w
-            LEFT JOIN definitions d ON d.lexeme = lower(w.lexeme)
-                AND d.entry_idx = 0 AND d.meaning_idx = 0 AND d.def_idx = 0
-            LEFT JOIN (
-                SELECT lexeme, COUNT(*) as def_count
-                FROM definitions
-                GROUP BY lexeme
-            ) dc ON dc.lexeme = lower(w.lexeme)
-            WHERE lower(w.lexeme) LIKE lower(?) || '%'
-            ORDER BY
-                CASE WHEN lower(w.lexeme) = lower(?) THEN 0 ELSE 1 END,
-                length(w.lexeme),
-                w.lexeme,
-                w.word_ix
-            """,
+            load_sql("queries/search_words.sql"),
             [query, query],
         ).fetchall()
 

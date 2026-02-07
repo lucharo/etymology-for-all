@@ -30,6 +30,17 @@ export async function handleApiResponse(response, context = 'request') {
     throw new Error(`Failed to complete ${context}`);
 }
 
+/**
+ * Check if a graph API response indicates the word exists but has no etymology.
+ * Returns { noEtymology: true, lexeme } if so, null otherwise.
+ */
+export function checkNoEtymology(data) {
+    if (data && data.no_etymology === true) {
+        return { noEtymology: true, lexeme: data.lexeme || '' };
+    }
+    return null;
+}
+
 export function buildNodeLabel(node) {
     const langName = node.lang_name || getLangName(node.lang);
     const displayWord = node.lexeme || node.id;

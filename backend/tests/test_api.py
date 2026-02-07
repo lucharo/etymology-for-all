@@ -14,7 +14,6 @@ import tempfile
 from pathlib import Path
 
 import duckdb
-import pytest
 from fastapi.testclient import TestClient
 
 TEMP_DIR = Path(tempfile.mkdtemp(prefix="etymdb-test-"))
@@ -172,27 +171,29 @@ def test_graph_endpoint_returns_nodes_and_edges():
     assert any(node["lexeme"] == "mother" for node in payload["nodes"])
 
 
-@pytest.mark.parametrize(
-    "word",
-    [
-        # Word doesn't exist in the database at all
-        pytest.param("unknownword", id="missing-word"),
-        # Word exists but has no etymology links (see word_ix=4 in test data)
-        pytest.param("loneword", id="no-etymology"),
-    ],
-)
-def test_graph_endpoint_returns_404(word):
-    """Test that graph returns 404 for missing words or words without etymology."""
-    response = client.get(f"/graph/{word}")
+def test_graph_endpoint_returns_404_for_missing_word():
+    """Test that graph returns 404 for words not in the database."""
+    response = client.get("/graph/unknownword")
     assert response.status_code == 404
+
+
+def test_graph_endpoint_returns_no_etymology_for_loneword():
+    """Test that graph returns 200 with no_etymology flag for words without links."""
+    response = client.get("/graph/loneword")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["no_etymology"] is True
+    assert payload["lexeme"] == "loneword"
+    assert len(payload["nodes"]) == 1
+    assert payload["edges"] == []
 
 
 def test_random_endpoint_returns_word():
     response = client.get("/random")
     assert response.status_code == 200
-    # "mother", "twin", and "friend" are in v_english_curated (has etymology, is clean)
+    # "mother", "twin", "friend", and "uplander" are in v_english_curated (has etymology, is clean)
     # "loneword" has no etymology links so it's excluded
-    assert response.json()["word"] in ["mother", "twin", "friend"]
+    assert response.json()["word"] in ["mother", "twin", "friend", "uplander"]
 
 
 def test_graph_picks_entry_with_most_links():
@@ -287,3 +288,47 @@ def test_compound_includes_morpheme_but_not_garbage_links():
 
     # Verify we have the expected number of nodes (uplander, upland, -er = 3)
     assert len(payload["nodes"]) == 3
+
+
+def test_health_check_returns_db_stats():
+    """Test that health check verifies database connectivity."""
+    response = client.get("/health")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "healthy"
+    assert "db" in payload
+    assert payload["db"]["words"] >= 1
+    assert payload["db"]["definitions"] >= 1
+
+
+def test_version_endpoint():
+    """Test that version endpoint returns version and db_stats."""
+    response = client.get("/version")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "version" in payload
+    assert "db_stats" in payload
+    assert payload["db_stats"]["words"] >= 1
+
+
+def test_edges_include_link_type():
+    """Test that edges include the link type from the database."""
+    response = client.get("/graph/mother")
+    assert response.status_code == 200
+    payload = response.json()
+    # mother -> mōdēr is an "inh" (inherited) link
+    for edge in payload["edges"]:
+        assert "type" in edge, f"Edge {edge} missing 'type' field"
+    inh_edges = [e for e in payload["edges"] if e["type"] == "inh"]
+    assert len(inh_edges) >= 1
+
+
+def test_edges_include_compound_and_type():
+    """Test that compound edges have both compound flag and link type."""
+    response = client.get("/graph/uplander")
+    assert response.status_code == 200
+    payload = response.json()
+    compound_edges = [e for e in payload["edges"] if e.get("compound")]
+    assert len(compound_edges) >= 1
+    for edge in compound_edges:
+        assert "type" in edge

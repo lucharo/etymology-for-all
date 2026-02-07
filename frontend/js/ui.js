@@ -55,8 +55,9 @@ export function showLoading(elements) {
     if (cy) cy.elements().remove();
 }
 
-export function showError(message, elements, minimizeGraph) {
+export function showError(message, elements, minimizeGraph, options = {}) {
     const { loadingEl, emptyState, errorState, errorMessage, wordInfo, directionIndicator, expandBtn } = elements;
+    const errorActions = document.getElementById('error-actions');
 
     loadingEl.classList.add('hidden');
     emptyState.classList.add('hidden');
@@ -66,6 +67,37 @@ export function showError(message, elements, minimizeGraph) {
     if (directionIndicator) directionIndicator.classList.add('hidden');
     if (expandBtn) expandBtn.classList.add('hidden');
     minimizeGraph();
+
+    // Build action buttons
+    if (errorActions) {
+        errorActions.innerHTML = '';
+
+        // Wiktionary link (for no-etymology case)
+        if (options.wiktionaryWord) {
+            const wiktLink = document.createElement('a');
+            wiktLink.href = `https://en.wiktionary.org/wiki/${encodeURIComponent(options.wiktionaryWord)}`;
+            wiktLink.target = '_blank';
+            wiktLink.rel = 'noopener';
+            wiktLink.className = 'error-action-btn';
+            wiktLink.textContent = 'Look up on Wiktionary';
+            errorActions.appendChild(wiktLink);
+        }
+
+        // Report issue button
+        if (options.searchedWord) {
+            const reportLink = document.createElement('a');
+            const title = encodeURIComponent(`Issue with word: ${options.searchedWord}`);
+            const body = encodeURIComponent(
+                `**Word:** ${options.searchedWord}\n**Error:** ${message}\n\n**Additional context:**\n(Please describe what you expected to see)`
+            );
+            reportLink.href = `https://github.com/lucharo/etymology-for-all/issues/new?title=${title}&body=${body}`;
+            reportLink.target = '_blank';
+            reportLink.rel = 'noopener';
+            reportLink.className = 'error-action-btn error-action-report';
+            reportLink.textContent = 'Report issue with this word';
+            errorActions.appendChild(reportLink);
+        }
+    }
 }
 
 export function showGraph(elements) {
