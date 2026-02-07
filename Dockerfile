@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends zstd && rm -rf 
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/backend /app/backend
 COPY --from=builder /app/frontend /app/frontend
+COPY --from=builder /app/pyproject.toml /app/pyproject.toml
 
 # Copy database (compressed or uncompressed) and decompress if needed
 COPY backend/data/etymdb.duckdb* /app/backend/data/

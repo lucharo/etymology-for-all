@@ -159,7 +159,10 @@ def get_db_stats() -> dict:
     """Return row counts for key tables."""
     with _ConnectionManager() as conn:
         words = conn.execute("SELECT COUNT(*) FROM v_english_curated").fetchone()[0]
-        definitions = conn.execute("SELECT COUNT(*) FROM definitions").fetchone()[0]
+        try:
+            definitions = conn.execute("SELECT COUNT(*) FROM definitions").fetchone()[0]
+        except Exception:
+            definitions = 0
         return {"words": words, "definitions": definitions}
 
 
