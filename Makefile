@@ -25,6 +25,7 @@ hf-stage:
 	mkdir -p $(HF_REPO)/backend/data $(HF_REPO)/frontend $(HF_REPO)/cloudflare-worker
 	cp Dockerfile README.md pyproject.toml uv.lock $(HF_REPO)/
 	cp backend/*.py $(HF_REPO)/backend/
+	cp -r backend/sql $(HF_REPO)/backend/
 	@if [ -f $(DB_COMPRESSED) ]; then cp $(DB_COMPRESSED) $(HF_REPO)/backend/data/; else cp $(DB_SRC) $(HF_REPO)/backend/data/; fi
 	cp -r frontend/* $(HF_REPO)/frontend/
 	cp cloudflare-worker/* $(HF_REPO)/cloudflare-worker/
