@@ -2,7 +2,7 @@
  * Search and autocomplete functionality
  */
 
-import { handleApiResponse, truncate } from './utils.js';
+import { handleApiResponse, truncate, escapeHtml } from './utils.js';
 
 const FETCH_DEPTH = 10;
 
@@ -49,9 +49,9 @@ export function showSuggestions(results, suggestionsEl, onSelect) {
     suggestionsEl.innerHTML = results
         .map(
             (r, i) => `
-            <div class="suggestion-item" data-index="${i}" data-word="${r.word}">
-                <span class="suggestion-word">${r.word}</span>
-                ${r.sense ? `<div class="suggestion-sense">${truncate(r.sense, 60)}</div>` : ''}
+            <div class="suggestion-item" data-index="${i}" data-word="${escapeHtml(r.word)}">
+                <span class="suggestion-word">${escapeHtml(r.word)}</span>
+                ${r.sense ? `<div class="suggestion-sense">${escapeHtml(truncate(r.sense, 60))}</div>` : ''}
             </div>
         `
         )

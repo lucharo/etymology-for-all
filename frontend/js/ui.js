@@ -40,7 +40,7 @@ export function hideNodeDetail(nodeDetail) {
 
 // State management
 export function showLoading(elements) {
-    const { loadingEl, emptyState, errorState, wordInfo, graphOptions, statsPanel, statsToggle, directionIndicator, expandBtn } = elements;
+    const { loadingEl, emptyState, errorState, wordInfo, graphOptions, statsPanel, statsToggle, graphLegend, expandBtn, treeView } = elements;
     const cy = getCy();
 
     loadingEl.classList.remove('hidden');
@@ -50,13 +50,14 @@ export function showLoading(elements) {
     if (graphOptions) graphOptions.classList.add('hidden');
     if (statsPanel) statsPanel.classList.add('hidden');
     if (statsToggle) statsToggle.classList.remove('active');
-    if (directionIndicator) directionIndicator.classList.add('hidden');
+    if (graphLegend) graphLegend.classList.add('hidden');
     if (expandBtn) expandBtn.classList.add('hidden');
+    if (treeView) treeView.innerHTML = '';
     if (cy) cy.elements().remove();
 }
 
 export function showError(message, elements, minimizeGraph, options = {}) {
-    const { loadingEl, emptyState, errorState, errorMessage, wordInfo, directionIndicator, expandBtn } = elements;
+    const { loadingEl, emptyState, errorState, errorMessage, wordInfo, graphLegend, expandBtn } = elements;
     const errorActions = document.getElementById('error-actions');
 
     loadingEl.classList.add('hidden');
@@ -64,7 +65,7 @@ export function showError(message, elements, minimizeGraph, options = {}) {
     errorState.classList.remove('hidden');
     errorMessage.textContent = message;
     wordInfo.classList.add('hidden');
-    if (directionIndicator) directionIndicator.classList.add('hidden');
+    if (graphLegend) graphLegend.classList.add('hidden');
     if (expandBtn) expandBtn.classList.add('hidden');
     minimizeGraph();
 
@@ -153,7 +154,6 @@ export function updateDepthUI(currentDepth, graphMaxDepth, elements) {
 // Expand/minimize
 export function createExpandHandlers(graphContainer, graphBackdrop) {
     let isExpanded = false;
-    const cy = getCy;
 
     function toggleExpandGraph() {
         isExpanded = !isExpanded;

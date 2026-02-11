@@ -9,6 +9,16 @@ export function getLangName(lang) {
     return lang;  // Return raw code if no name available
 }
 
+export function escapeHtml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 export function truncate(text, maxLength) {
     if (!text || text.length <= maxLength) return text;
     return text.slice(0, maxLength).trim() + '…';

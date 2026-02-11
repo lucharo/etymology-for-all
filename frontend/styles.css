@@ -13,6 +13,7 @@
     --border: #e7e5e4;
     --accent: #0c4a6e;
     --accent-light: #e0f2fe;
+    --error: #dc2626;
 
     /* Language family colors - earthy, distinct */
     --lang-modern: #0284c7;      /* Modern languages (en, fr, de, etc.) */
@@ -300,7 +301,6 @@ button:active {
     border-radius: 12px;
     position: relative;
     overflow: hidden;
-    transition: all 0.3s ease;
 }
 
 /* Expanded graph state */
@@ -313,6 +313,7 @@ button:active {
     z-index: 50;
     min-height: auto;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
 }
 
 /* Expand/minimize button */
@@ -764,10 +765,9 @@ button:active {
 
 /* Direction indicator within legend */
 #direction-indicator {
-    display: inline-flex !important;
+    display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-    visibility: visible !important;
 }
 
 #direction-indicator.vertical {
@@ -777,15 +777,13 @@ button:active {
 .direction-label {
     font-family: var(--font-sans);
     letter-spacing: 0.02em;
-    color: var(--text-muted) !important;
-    display: inline !important;
+    color: var(--text-muted);
 }
 
 .direction-arrow {
-    color: var(--text-muted) !important;
+    color: var(--text-muted);
     font-size: 1rem;
     line-height: 1;
-    display: inline !important;
 }
 
 /* Legend divider */
@@ -875,6 +873,54 @@ button:active {
 .header-btn:hover {
     background: var(--bg);
     color: var(--text);
+}
+
+/* Mobile menu (hidden on desktop by default) */
+.mobile-only {
+    display: none;
+}
+
+.mobile-menu-wrapper {
+    position: relative;
+}
+
+.mobile-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: var(--space-xs) 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 20;
+    min-width: 200px;
+}
+
+.mobile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.875rem;
+    color: var(--text);
+    background: none;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: left;
+}
+
+.mobile-menu-item:hover {
+    background: var(--bg);
+}
+
+.mobile-menu-divider {
+    height: 1px;
+    background: var(--border);
+    margin: var(--space-xs) 0;
 }
 
 /* Modal */
@@ -1174,20 +1220,16 @@ footer a:hover {
         font-size: 0.875rem;
     }
 
-    .header-btn {
-        padding: var(--space-sm);
-        font-size: 0.75rem;
-        min-width: 36px;
-        min-height: 36px;
+    .desktop-only {
+        display: none !important;
     }
 
-    .header-btn .btn-label {
-        display: none;
+    .mobile-only {
+        display: block;
     }
 
-    .header-btn svg {
-        width: 18px;
-        height: 18px;
+    .header-buttons {
+        grid-template-columns: auto;
     }
 
     /* Keep search on one row with compact buttons */
@@ -1273,11 +1315,6 @@ footer a:hover {
         width: 14px;
     }
 
-    /* Hide detailed link types on mobile */
-    #edge-legend-detailed {
-        display: none !important;
-    }
-
     /* Direction indicator vertical on mobile */
     #direction-indicator {
         flex-direction: column;
@@ -1296,6 +1333,7 @@ footer a:hover {
         border-radius: 12px 12px 0 0;
         padding: var(--space-sm) var(--space-md);
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 55;
     }
 
     .detail-word {

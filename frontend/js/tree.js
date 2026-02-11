@@ -3,7 +3,7 @@
  * Renders etymology data as a text-based tree using Unicode box-drawing characters
  */
 
-import { getLangName } from './utils.js';
+import { getLangName, escapeHtml } from './utils.js';
 
 /**
  * Build a tree structure from nodes and edges
@@ -35,7 +35,7 @@ export function buildTree(nodes, edges, startWord, maxDepth) {
     // Fallback: find any node with matching lexeme
     if (!startNode) {
         startNode = nodes.find(n =>
-            n.lexeme.toLowerCase() === startWord.toLowerCase()
+            n.lexeme && n.lexeme.toLowerCase() === startWord.toLowerCase()
         );
     }
 
@@ -115,16 +115,4 @@ export function renderTreeHTML(tree) {
     return `<div class="tree-content">${lines.join('')}</div>`;
 }
 
-/**
- * Escape HTML special characters
- */
-function escapeHtml(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
 

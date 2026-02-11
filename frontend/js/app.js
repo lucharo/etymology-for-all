@@ -166,16 +166,9 @@ function setView(view) {
     } else {
         elements.treeView.classList.add('hidden');
         elements.cyContainer.classList.remove('hidden');
-        if (elements.graphLegend && fullGraphData) {
-            elements.graphLegend.classList.remove('hidden');
-        }
-        // Re-render graph to update layout
+        // Re-render graph fully (may have been skipped while in tree view)
         if (fullGraphData && currentSearchedWord) {
-            const cy = getCy();
-            if (cy) {
-                cy.resize();
-                cy.fit();
-            }
+            renderGraph(fullGraphData, currentSearchedWord, true);
         }
     }
 }
@@ -251,21 +244,33 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
 
     hideNodeDetail(elements.nodeDetail);
 
-    const { seenLangs, langCounts, langCodes } = renderGraphElements(displayData, elements.graphLegend, elements.directionIndicator);
-
     elements.currentWord.textContent = searchedWord;
-    updateInfoSummary(langCounts, langCodes, elements.langBreakdown);
     elements.wordInfo.classList.remove('hidden');
     showGraph(elements);
 
-    setTimeout(() => {
-        const graphDepth = calculateGraphDepth(searchedWord);
-        updateStats(displayData.nodes.length, displayData.edges.length, langCounts.size, graphDepth, elements);
-    }, 50);
-
-    // Update tree view if in tree mode
     if (currentView === 'tree') {
+        // In tree view, only render tree — skip expensive graph layout
         renderTreeView();
+    } else {
+        // Render graph and legend
+        const { seenLangs, langCounts, langCodes } = renderGraphElements(displayData, elements.graphLegend, elements.directionIndicator);
+        updateInfoSummary(langCounts, langCodes, elements.langBreakdown);
+
+        // Re-fit after browser has reflowed layout (double-RAF ensures reflow is complete)
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const cy = getCy();
+                if (cy) {
+                    cy.resize();
+                    cy.fit(undefined, 40);
+                }
+            });
+        });
+
+        setTimeout(() => {
+            const graphDepth = calculateGraphDepth(searchedWord);
+            updateStats(displayData.nodes.length, displayData.edges.length, langCounts.size, graphDepth, elements);
+        }, 50);
     }
 }
 
@@ -504,16 +509,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetchVersion();
     }
 
-    // Link types toggle
+    // Link types toggle - shared handler for both desktop and mobile checkboxes
     const showLinkTypesCheckbox = document.getElementById('show-link-types');
+    const mobileShowLinkTypes = document.getElementById('mobile-show-link-types');
     const simpleLegend = document.getElementById('edge-legend-simple');
     const detailedLegend = document.getElementById('edge-legend-detailed');
+
+    function handleLinkTypesToggle(enabled) {
+        setShowLinkTypes(enabled);
+        if (simpleLegend) simpleLegend.classList.toggle('hidden', enabled);
+        if (detailedLegend) detailedLegend.classList.toggle('hidden', !enabled);
+        // Re-render to apply/remove link type colors
+        if (fullGraphData && currentSearchedWord) {
+            renderGraph(fullGraphData, currentSearchedWord, true);
+        }
+    }
+
     if (showLinkTypesCheckbox) {
         showLinkTypesCheckbox.addEventListener('change', () => {
             const enabled = showLinkTypesCheckbox.checked;
-            setShowLinkTypes(enabled);
-            if (simpleLegend) simpleLegend.classList.toggle('hidden', enabled);
-            if (detailedLegend) detailedLegend.classList.toggle('hidden', !enabled);
+            if (mobileShowLinkTypes) mobileShowLinkTypes.checked = enabled;
+            handleLinkTypesToggle(enabled);
+        });
+    }
+
+    // Mobile menu
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileAboutBtn = document.getElementById('mobile-about-btn');
+    const mobileIncludeCompound = document.getElementById('mobile-include-compound');
+
+    if (mobileMenuBtn && mobileMenu) {
+        mobileMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            mobileMenu.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.mobile-menu-wrapper')) {
+                mobileMenu.classList.add('hidden');
+            }
+        });
+    }
+
+    if (mobileAboutBtn) {
+        mobileAboutBtn.addEventListener('click', () => {
+            mobileMenu?.classList.add('hidden');
+            if (aboutModal) aboutModal.classList.remove('hidden');
+        });
+    }
+
+    // Sync mobile compound checkbox with desktop
+    if (mobileIncludeCompound && elements.includeCompound) {
+        mobileIncludeCompound.addEventListener('change', () => {
+            elements.includeCompound.checked = mobileIncludeCompound.checked;
+            elements.includeCompound.dispatchEvent(new Event('change'));
+        });
+    }
+
+    // Sync mobile link types checkbox with desktop
+    if (mobileShowLinkTypes) {
+        mobileShowLinkTypes.addEventListener('change', () => {
+            const enabled = mobileShowLinkTypes.checked;
+            if (showLinkTypesCheckbox) showLinkTypesCheckbox.checked = enabled;
+            handleLinkTypesToggle(enabled);
         });
     }
 });

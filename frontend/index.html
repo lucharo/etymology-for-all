@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=50">
+    <link rel="stylesheet" href="styles.css?v=52">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
@@ -18,7 +18,8 @@
             <h1>Etymology Explorer</h1>
             <p class="subtitle">Trace the origins of words through time</p>
             <div class="header-buttons">
-                <a href="https://github.com/lucharo/etymology-for-all/issues/new/choose" target="_blank" rel="noopener" class="header-btn" title="Report an issue">
+                <!-- Desktop: individual buttons -->
+                <a href="https://github.com/lucharo/etymology-for-all/issues/new/choose" target="_blank" rel="noopener" class="header-btn desktop-only" title="Report an issue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -26,7 +27,7 @@
                     </svg>
                     <span class="btn-label">Issue</span>
                 </a>
-                <button id="about-btn" class="header-btn" title="About this project">
+                <button id="about-btn" class="header-btn desktop-only" title="About this project">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M12 16v-4"></path>
@@ -34,7 +35,7 @@
                     </svg>
                     <span class="btn-label">About</span>
                 </button>
-                <div class="settings-wrapper">
+                <div class="settings-wrapper desktop-only">
                     <button id="settings-btn" class="header-btn" title="Settings" aria-label="Settings">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
@@ -50,6 +51,30 @@
                             <input type="checkbox" id="show-link-types">
                             <span>Show link types</span>
                         </label>
+                    </div>
+                </div>
+                <!-- Mobile: single menu button -->
+                <div class="mobile-menu-wrapper mobile-only">
+                    <button id="mobile-menu-btn" class="header-btn" title="Menu" aria-label="Menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="5" cy="12" r="1"></circle>
+                            <circle cx="12" cy="12" r="1"></circle>
+                            <circle cx="19" cy="12" r="1"></circle>
+                        </svg>
+                    </button>
+                    <div id="mobile-menu" class="mobile-menu hidden">
+                        <button id="mobile-about-btn" class="mobile-menu-item">About</button>
+                        <div class="mobile-menu-divider"></div>
+                        <label class="mobile-menu-item settings-option" title="Include compound words">
+                            <input type="checkbox" id="mobile-include-compound" checked>
+                            <span>Include compound words</span>
+                        </label>
+                        <label class="mobile-menu-item settings-option" title="Color edges by link type">
+                            <input type="checkbox" id="mobile-show-link-types">
+                            <span>Show link types</span>
+                        </label>
+                        <div class="mobile-menu-divider"></div>
+                        <a href="https://github.com/lucharo/etymology-for-all/issues/new/choose" target="_blank" rel="noopener" class="mobile-menu-item">Report an issue</a>
                     </div>
                 </div>
             </div>
