@@ -159,15 +159,15 @@ function setView(view) {
     if (view === 'tree') {
         elements.cyContainer.classList.add('hidden');
         elements.treeView.classList.remove('hidden');
-        if (elements.directionIndicator) {
-            elements.directionIndicator.classList.add('hidden');
+        if (elements.graphLegend) {
+            elements.graphLegend.classList.add('hidden');
         }
         renderTreeView();
     } else {
         elements.treeView.classList.add('hidden');
         elements.cyContainer.classList.remove('hidden');
-        if (elements.directionIndicator) {
-            elements.directionIndicator.classList.remove('hidden');
+        if (elements.graphLegend && fullGraphData) {
+            elements.graphLegend.classList.remove('hidden');
         }
         // Re-render graph to update layout
         if (fullGraphData && currentSearchedWord) {
@@ -187,8 +187,10 @@ function renderTreeView() {
         return;
     }
 
-    // Filter data by current depth first
-    const displayData = filterGraphByDepth(fullGraphData, currentDepth, currentSearchedWord);
+    // Apply filters: depth first, then compound
+    const includeCompound = elements.includeCompound?.checked ?? true;
+    let displayData = filterGraphByDepth(fullGraphData, currentDepth, currentSearchedWord);
+    displayData = filterCompoundEdges(displayData, includeCompound, currentSearchedWord);
 
     const tree = buildTree(displayData.nodes, displayData.edges, currentSearchedWord, currentDepth);
     const treeHTML = renderTreeHTML(tree);

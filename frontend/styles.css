@@ -1175,8 +1175,10 @@ footer a:hover {
     }
 
     .header-btn {
-        padding: var(--space-xs);
+        padding: var(--space-sm);
         font-size: 0.75rem;
+        min-width: 36px;
+        min-height: 36px;
     }
 
     .header-btn .btn-label {
@@ -1184,8 +1186,8 @@ footer a:hover {
     }
 
     .header-btn svg {
-        width: 14px;
-        height: 14px;
+        width: 18px;
+        height: 18px;
     }
 
     /* Keep search on one row with compact buttons */
@@ -1280,10 +1282,6 @@ footer a:hover {
     #direction-indicator {
         flex-direction: column;
         align-items: flex-start;
-    }
-
-    .direction-arrow {
-        transform: rotate(90deg);
     }
 
     /* Detail panel full width at bottom on mobile */
