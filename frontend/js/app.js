@@ -333,24 +333,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check server health first (HF Spaces may be sleeping)
     checkServerHealth(120000); // 2 minutes max wait, runs in background
 
-    // Initialize Cytoscape
-    initCytoscape(
-        elements.cyContainer,
-        (data) => showNodeDetail(data, elements),
-        () => hideNodeDetail(elements.nodeDetail),
-        (node, container) => {
-            const sense = node.data('sense');
-            const langName = node.data('langName') || getLangName(node.data('lang'));
-            let tip = `${node.data('word')} (${langName})`;
-            if (sense) tip += `\n"${sense}"`;
-            container.title = tip;
-            container.style.cursor = 'pointer';
-        },
-        (container) => {
-            container.title = '';
-            container.style.cursor = 'default';
-        }
-    );
+    // Initialize Cytoscape (wrapped so UI still works if CDN scripts failed to load)
+    try {
+        initCytoscape(
+            elements.cyContainer,
+            (data) => showNodeDetail(data, elements),
+            () => hideNodeDetail(elements.nodeDetail),
+            (node, container) => {
+                const sense = node.data('sense');
+                const langName = node.data('langName') || getLangName(node.data('lang'));
+                let tip = `${node.data('word')} (${langName})`;
+                if (sense) tip += `\n"${sense}"`;
+                container.title = tip;
+                container.style.cursor = 'pointer';
+            },
+            (container) => {
+                container.title = '';
+                container.style.cursor = 'default';
+            }
+        );
+    } catch (e) {
+        console.error('Failed to initialize graph engine:', e);
+    }
 
     // Detail panel close
     if (elements.detailClose) {
@@ -372,6 +376,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Compound filter checkbox - re-renders graph when toggled
     if (elements.includeCompound) {
         elements.includeCompound.addEventListener('change', () => {
+            const mobileCompound = document.getElementById('mobile-include-compound');
+            if (mobileCompound) mobileCompound.checked = elements.includeCompound.checked;
             if (fullGraphData && currentSearchedWord) {
                 renderGraph(fullGraphData, currentSearchedWord, true);
             }

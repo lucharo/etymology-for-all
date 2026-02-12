@@ -2,7 +2,7 @@
  * UI state management and controls
  */
 
-import { getLangName, truncate } from './utils.js';
+import { getLangName, truncate, escapeHtml } from './utils.js';
 import { getCy } from './graph.js';
 
 // Show node detail panel
@@ -133,8 +133,8 @@ export function updateInfoSummary(langCounts, langCodes, langBreakdown) {
             const code = langCodes.get(langName) || '';
             // Show code in tooltip on hover, keep UI clean
             return `
-            <span class="lang-chip" title="${code}">
-                <span class="lang-chip-name">${langName}</span>
+            <span class="lang-chip" title="${escapeHtml(code)}">
+                <span class="lang-chip-name">${escapeHtml(langName)}</span>
                 <span class="lang-chip-count">${count}</span>
             </span>
         `;

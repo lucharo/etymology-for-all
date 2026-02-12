@@ -884,6 +884,11 @@ button:active {
     position: relative;
 }
 
+#mobile-menu-btn {
+    min-width: 44px;
+    min-height: 44px;
+}
+
 .mobile-menu {
     position: absolute;
     top: calc(100% + 6px);
