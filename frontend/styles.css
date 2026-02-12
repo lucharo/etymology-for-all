@@ -1223,96 +1223,97 @@ footer a:hover {
 
 /* Responsive */
 @media (max-width: 640px) {
-    main {
+    /* All mobile styles scoped to body:not(.force-desktop) */
+    body:not(.force-desktop) main {
         padding: var(--space-sm);
     }
 
-    header {
+    body:not(.force-desktop) header {
         margin-bottom: var(--space-md);
     }
 
-    h1 {
+    body:not(.force-desktop) h1 {
         font-size: 1.5rem;
         padding-right: 0;
     }
 
-    .subtitle {
+    body:not(.force-desktop) .subtitle {
         font-size: 0.875rem;
     }
 
-    .desktop-only {
+    body:not(.force-desktop) .desktop-only {
         display: none !important;
     }
 
-    .mobile-only {
+    body:not(.force-desktop) .mobile-only {
         display: block;
     }
 
-    .header-buttons {
+    body:not(.force-desktop) .header-buttons {
         grid-template-columns: auto;
     }
 
     /* Keep search on one row with compact buttons */
-    .search-container {
+    body:not(.force-desktop) .search-container {
         gap: var(--space-xs);
         margin-bottom: var(--space-xs);
         flex-wrap: nowrap;
     }
 
-    .search-hint {
+    body:not(.force-desktop) .search-hint {
         font-size: 0.7rem;
         margin-bottom: var(--space-xs);
     }
 
-    .graph-options {
+    body:not(.force-desktop) .graph-options {
         margin-bottom: var(--space-xs);
         flex-wrap: wrap;
     }
 
-    .view-toggle {
+    body:not(.force-desktop) .view-toggle {
         order: -1;
         justify-content: center;
         margin-bottom: var(--space-xs);
     }
 
-    .depth-control {
+    body:not(.force-desktop) .depth-control {
         font-size: 0.75rem;
     }
 
-    .tree-content {
+    body:not(.force-desktop) .tree-content {
         font-size: 0.75rem;
     }
 
-    .depth-btn {
+    body:not(.force-desktop) .depth-btn {
         width: 32px;
         height: 32px;
     }
 
-    #word-input {
+    body:not(.force-desktop) #word-input {
         padding: var(--space-xs) var(--space-sm);
-        font-size: 0.9rem;
+        font-size: 16px; /* Prevent iOS auto-zoom on focus */
     }
 
-    #search-btn,
-    #random-btn {
+    body:not(.force-desktop) #search-btn,
+    body:not(.force-desktop) #random-btn {
         padding: var(--space-xs) var(--space-sm);
         min-width: 44px;
     }
 
-    #search-btn svg,
-    #random-btn svg {
+    body:not(.force-desktop) #search-btn svg,
+    body:not(.force-desktop) #random-btn svg {
         width: 18px;
         height: 18px;
     }
 
     /* Graph takes more space */
-    #graph-container {
+    body:not(.force-desktop) #graph-container {
         min-height: 50vh;
         flex: 1;
     }
 
     /* Legend vertical on mobile - top-left to avoid overlapping leaf nodes */
-    .graph-legend {
+    body:not(.force-desktop) .graph-legend {
         font-size: 0.6rem;
         padding: 4px 6px;
         top: var(--space-sm);
@@ -1323,27 +1324,27 @@ footer a:hover {
         align-items: flex-start;
     }
 
-    .edge-legend {
+    body:not(.force-desktop) .edge-legend {
         gap: 2px;
         flex-direction: column;
     }
 
-    .legend-divider {
+    body:not(.force-desktop) .legend-divider {
         display: none;
     }
 
-    .legend-line {
+    body:not(.force-desktop) .legend-line {
         width: 14px;
     }
 
     /* Direction indicator vertical on mobile */
-    #direction-indicator {
+    body:not(.force-desktop) #direction-indicator {
         flex-direction: column;
         align-items: flex-start;
     }
 
     /* Detail panel full width at bottom on mobile */
-    #node-detail {
+    body:not(.force-desktop) #node-detail {
         position: fixed;
         top: auto;
         bottom: 0;
@@ -1357,63 +1358,68 @@ footer a:hover {
         z-index: 55;
     }
 
-    .detail-word {
+    body:not(.force-desktop) .detail-word {
         font-size: 1.25rem;
     }
 
-    .detail-row {
+    body:not(.force-desktop) .detail-row {
         padding: var(--space-xs) 0;
     }
 
     /* Info bar more compact */
-    #word-info {
+    body:not(.force-desktop) #word-info {
         padding: var(--space-xs) var(--space-sm);
         gap: var(--space-xs) var(--space-sm);
         margin-top: var(--space-sm);
     }
 
-    #current-word {
+    body:not(.force-desktop) #current-word {
         font-size: 1rem;
     }
 
-    #lang-breakdown {
+    body:not(.force-desktop) #lang-breakdown {
         font-size: 0.7rem;
     }
 
-    .lang-chip {
+    body:not(.force-desktop) .lang-chip {
         padding: 1px 6px;
     }
 
     /* Stats panel on mobile */
-    .stats-grid {
+    body:not(.force-desktop) .stats-grid {
         gap: var(--space-md);
     }
 
-    .stat-value {
+    body:not(.force-desktop) .stat-value {
         font-size: 1rem;
     }
 
-    .stat-label {
+    body:not(.force-desktop) .stat-label {
         font-size: 0.6rem;
     }
 
-    .stats-toggle {
+    body:not(.force-desktop) .stats-toggle {
         font-size: 0.7rem;
         padding: 2px 6px;
     }
 
     /* Modal adjustments */
-    .modal-content {
+    body:not(.force-desktop) .modal-content {
         padding: var(--space-md);
         max-height: 90vh;
     }
 
-    .tab-content h2 {
+    body:not(.force-desktop) .tab-content h2 {
         font-size: 1.25rem;
     }
 
-    footer {
+    body:not(.force-desktop) footer {
         padding: var(--space-sm);
         font-size: 0.75rem;
+    }
+
+    /* Mobile menu wrapper always visible on small screens for toggle access */
+    .mobile-menu-wrapper.mobile-only {
+        display: block;
     }
 }
