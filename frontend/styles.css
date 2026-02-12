@@ -922,6 +922,21 @@ button:active {
     background: var(--bg);
 }
 
+.mobile-about-link {
+    color: var(--accent);
+    font-weight: 500;
+    justify-content: flex-start;
+}
+
+.mobile-external-link {
+    justify-content: space-between;
+}
+
+.mobile-external-link .external-icon {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
 .mobile-menu-divider {
     height: 1px;
     background: var(--border);
@@ -1296,11 +1311,12 @@ footer a:hover {
         flex: 1;
     }
 
-    /* Legend vertical on mobile */
+    /* Legend vertical on mobile - top-left to avoid overlapping leaf nodes */
     .graph-legend {
         font-size: 0.6rem;
         padding: 4px 6px;
-        bottom: var(--space-sm);
+        top: var(--space-sm);
+        bottom: auto;
         left: var(--space-sm);
         gap: 2px;
         flex-direction: column;
