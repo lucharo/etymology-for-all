@@ -135,7 +135,7 @@ export function updateInfoSummary(langCounts, langCodes, langBreakdown) {
             return `
             <span class="lang-chip" title="${escapeHtml(code)}">
                 <span class="lang-chip-name">${escapeHtml(langName)}</span>
-                <span class="lang-chip-count">${count}</span>
+                <span class="lang-chip-count">${escapeHtml(String(count))}</span>
             </span>
         `;
         })

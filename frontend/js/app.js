@@ -85,6 +85,7 @@ let graphMaxDepth = 10;
 const MIN_DEPTH = 1;
 let searchTimeout = null;
 let serverReady = false;
+let graphAvailable = false;
 let currentView = 'graph'; // 'graph' or 'tree'
 
 // Server health check with retry (HF Spaces sleep after inactivity)
@@ -279,6 +280,11 @@ async function handleSearch() {
     const word = elements.wordInput.value.trim();
     if (!word) return;
 
+    if (!graphAvailable) {
+        showError('Graph engine is not available. Try refreshing the page.', elements, minimizeGraph);
+        return;
+    }
+
     showLoading(elements);
 
     try {
@@ -291,6 +297,11 @@ async function handleSearch() {
 
 // Random word handler
 async function handleRandom() {
+    if (!graphAvailable) {
+        showError('Graph engine is not available. Try refreshing the page.', elements, minimizeGraph);
+        return;
+    }
+
     showLoading(elements);
 
     try {
@@ -352,8 +363,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 container.style.cursor = 'default';
             }
         );
+        graphAvailable = true;
     } catch (e) {
         console.error('Failed to initialize graph engine:', e);
+        showError(
+            'Graph engine failed to load. Try refreshing the page.',
+            elements,
+            minimizeGraph
+        );
     }
 
     // Detail panel close
