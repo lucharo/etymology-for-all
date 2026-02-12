@@ -583,21 +583,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Desktop/mobile view toggle
     const toggleDesktopBtn = document.getElementById('toggle-desktop-btn');
+    const viewportMeta = document.querySelector('meta[name="viewport"]');
+
+    function applyDesktopMode(enabled) {
+        document.body.classList.toggle('force-desktop', enabled);
+        if (toggleDesktopBtn) {
+            toggleDesktopBtn.textContent = enabled ? 'Mobile view' : 'Desktop view';
+        }
+        // Change viewport width so browser zooms out to show desktop layout
+        if (viewportMeta) {
+            viewportMeta.content = enabled
+                ? 'width=1024'
+                : 'width=device-width, initial-scale=1.0';
+        }
+        // Resize graph after layout change
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const cy = getCy();
+                if (cy) {
+                    cy.resize();
+                    cy.fit(undefined, 40);
+                }
+            });
+        });
+    }
+
+    // Restore saved preference
+    if (localStorage.getItem('force-desktop') === 'true') {
+        applyDesktopMode(true);
+    }
+
     if (toggleDesktopBtn) {
         toggleDesktopBtn.addEventListener('click', () => {
-            const isDesktop = document.body.classList.toggle('force-desktop');
-            toggleDesktopBtn.textContent = isDesktop ? 'Mobile view' : 'Desktop view';
+            const isDesktop = !document.body.classList.contains('force-desktop');
+            localStorage.setItem('force-desktop', isDesktop);
+            applyDesktopMode(isDesktop);
             mobileMenu?.classList.add('hidden');
-            // Resize graph after layout change
-            const cy = getCy();
-            if (cy) {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        cy.resize();
-                        cy.fit(undefined, 40);
-                    });
-                });
-            }
         });
     }
 
