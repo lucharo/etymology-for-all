@@ -581,48 +581,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Desktop/mobile view toggle
-    const toggleDesktopBtn = document.getElementById('toggle-desktop-btn');
-    const viewportMeta = document.querySelector('meta[name="viewport"]');
-
-    function applyDesktopMode(enabled) {
-        document.documentElement.classList.toggle('force-desktop', enabled);
-        if (toggleDesktopBtn) {
-            toggleDesktopBtn.textContent = enabled ? 'Mobile view' : 'Desktop view';
-        }
-        // Change viewport width so browser zooms out to show desktop layout
-        if (viewportMeta) {
-            viewportMeta.content = enabled
-                ? 'width=1024'
-                : 'width=device-width, initial-scale=1.0';
-        }
-        // Resize graph after layout change
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                const cy = getCy();
-                if (cy) {
-                    cy.resize();
-                    cy.fit(undefined, 40);
-                }
-            });
-        });
-    }
-
-    // Restore saved preference (early script in <head> handles FOUC prevention;
-    // this ensures button text and graph resize are also applied)
-    if (document.documentElement.classList.contains('force-desktop')) {
-        applyDesktopMode(true);
-    }
-
-    if (toggleDesktopBtn) {
-        toggleDesktopBtn.addEventListener('click', () => {
-            const isDesktop = !document.documentElement.classList.contains('force-desktop');
-            localStorage.setItem('force-desktop', isDesktop);
-            applyDesktopMode(isDesktop);
-            mobileMenu?.classList.add('hidden');
-        });
-    }
-
     // Sync mobile compound checkbox with desktop
     if (mobileIncludeCompound && elements.includeCompound) {
         mobileIncludeCompound.addEventListener('change', () => {

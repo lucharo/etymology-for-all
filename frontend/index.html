@@ -4,17 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Etymology Graph Explorer</title>
-    <script>
-    // Apply saved desktop preference early to prevent FOUC
-    if (window.innerWidth < 1024 && localStorage.getItem('force-desktop') === 'true') {
-        document.documentElement.classList.add('force-desktop');
-        document.querySelector('meta[name="viewport"]').content = 'width=1024';
-    }
-    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=59">
+    <link rel="stylesheet" href="styles.css?v=60">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
@@ -80,8 +73,6 @@
                             <input type="checkbox" id="mobile-show-link-types">
                             <span>Show link types</span>
                         </label>
-                        <div class="mobile-menu-divider"></div>
-                        <button id="toggle-desktop-btn" class="mobile-menu-item">Desktop view</button>
                         <div class="mobile-menu-divider"></div>
                         <a href="https://github.com/lucharo/etymology-for-all/issues/new/choose" target="_blank" rel="noopener" class="mobile-menu-item mobile-external-link">Report an issue <span class="external-icon">↗</span></a>
                     </div>
