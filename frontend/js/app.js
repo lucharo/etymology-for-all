@@ -586,7 +586,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const viewportMeta = document.querySelector('meta[name="viewport"]');
 
     function applyDesktopMode(enabled) {
-        document.body.classList.toggle('force-desktop', enabled);
+        document.documentElement.classList.toggle('force-desktop', enabled);
         if (toggleDesktopBtn) {
             toggleDesktopBtn.textContent = enabled ? 'Mobile view' : 'Desktop view';
         }
@@ -608,14 +608,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Restore saved preference
-    if (localStorage.getItem('force-desktop') === 'true') {
+    // Restore saved preference (early script in <head> handles FOUC prevention;
+    // this ensures button text and graph resize are also applied)
+    if (document.documentElement.classList.contains('force-desktop')) {
         applyDesktopMode(true);
     }
 
     if (toggleDesktopBtn) {
         toggleDesktopBtn.addEventListener('click', () => {
-            const isDesktop = !document.body.classList.contains('force-desktop');
+            const isDesktop = !document.documentElement.classList.contains('force-desktop');
             localStorage.setItem('force-desktop', isDesktop);
             applyDesktopMode(isDesktop);
             mobileMenu?.classList.add('hidden');
