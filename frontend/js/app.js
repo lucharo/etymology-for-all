@@ -581,6 +581,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Desktop/mobile view toggle
+    const toggleDesktopBtn = document.getElementById('toggle-desktop-btn');
+    if (toggleDesktopBtn) {
+        toggleDesktopBtn.addEventListener('click', () => {
+            const isDesktop = document.body.classList.toggle('force-desktop');
+            toggleDesktopBtn.textContent = isDesktop ? 'Mobile view' : 'Desktop view';
+            mobileMenu?.classList.add('hidden');
+            // Resize graph after layout change
+            const cy = getCy();
+            if (cy) {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        cy.resize();
+                        cy.fit(undefined, 40);
+                    });
+                });
+            }
+        });
+    }
+
     // Sync mobile compound checkbox with desktop
     if (mobileIncludeCompound && elements.includeCompound) {
         mobileIncludeCompound.addEventListener('change', () => {
