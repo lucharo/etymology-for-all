@@ -6,3 +6,10 @@ backend/tests/__pycache__/
 # Data files (large, downloaded/generated locally)
 backend/data/*.duckdb
 backend/data/*.csv
+backend/data/*.zst
+
+# HF deployment staging
+.hf-deploy/
+
+# Local tool state
+.omc/

@@ -1,7 +1,7 @@
 .PHONY: hf-create hf-delete hf-squash hf-stage hf-push hf-deploy cf-deploy
 
 HF_SPACE := lucharo/etymology
-HF_REPO := /tmp/hf-etymology
+HF_REPO := .hf-deploy
 DB_SRC := backend/data/etymdb.duckdb
 DB_COMPRESSED := backend/data/etymdb.duckdb.zst
 
@@ -29,7 +29,7 @@ hf-stage:
 	@if [ -f $(DB_COMPRESSED) ]; then cp $(DB_COMPRESSED) $(HF_REPO)/backend/data/; else cp $(DB_SRC) $(HF_REPO)/backend/data/; fi
 	cp -r frontend/* $(HF_REPO)/frontend/
 	cp cloudflare-worker/* $(HF_REPO)/cloudflare-worker/
-	cd $(HF_REPO) && git init && git lfs install
+	cd $(HF_REPO) && git init -b main && git lfs install
 	cd $(HF_REPO) && echo "*.duckdb filter=lfs diff=lfs merge=lfs -text" > .gitattributes
 	cd $(HF_REPO) && echo "*.zst filter=lfs diff=lfs merge=lfs -text" >> .gitattributes
 	cd $(HF_REPO) && git add -A && git commit -m "Deploy"
