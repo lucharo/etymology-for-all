@@ -2,7 +2,8 @@
 name: hf-space-incident
 description: >
   Triage and recover this repo's Hugging Face Space when the service is unhealthy,
-  the runtime is stuck, or the Space shows RUNTIME_ERROR / launch timeout.
+  the runtime is stuck, or the Space shows RUNTIME_ERROR, launch timeout, or
+  branded 500s while the runtime API reports SLEEPING.
 allowed-tools:
   - Read
   - Edit
@@ -11,7 +12,7 @@ allowed-tools:
 
 # HF Space Incident
 
-Use this skill for this repo when the user says the Hugging Face Space is unhealthy, timing out, stuck in `RUNTIME_ERROR`, or failing health checks.
+Use this skill for this repo when the user says the Hugging Face Space is unhealthy, timing out, stuck in `RUNTIME_ERROR`, returning branded `500` pages while the runtime reports `SLEEPING`, or failing health checks.
 
 ## Goal
 
@@ -51,6 +52,7 @@ Then recover the service with the smallest reasonable action.
 
 6. Decide.
    - If run logs show Uvicorn started on `0.0.0.0:7860` and there is no traceback, while runtime is still unhealthy or stuck, treat it as an HF runtime issue.
+   - If the public Space or custom domain returns a Hugging Face-branded `500` page while the runtime API reports `SLEEPING`, and local `/health` is healthy, treat that as an HF runtime-side recoverable outage rather than an app-code failure.
    - If local health fails or logs show a real traceback, fix the repo code first.
 
 7. Recover with the smallest action.
@@ -72,6 +74,9 @@ Then recover the service with the smallest reasonable action.
 
 10. If guarded auto-recovery exists, validate it safely.
    - First inspect the exact trigger shape before assuming it will restart anything.
+   - In the current status-page repo, the positive restart path is intentionally based on exact signal pairs, not broad heuristics:
+     - `503 + RUNTIME_ERROR`
+     - `500 + SLEEPING`
    - Safe production validation:
      - pause the Space,
      - confirm the app serves `503`,
@@ -93,8 +98,9 @@ Then recover the service with the smallest reasonable action.
   - and HF is the only failing layer.
 - The status page auto-recovery is intentionally conservative:
   - two consecutive failures,
-  - status code `503`,
-  - HF runtime `RUNTIME_ERROR`,
+  - exact restart-eligible pairs:
+    - `503 + RUNTIME_ERROR`
+    - `500 + SLEEPING`
   - one-hour cooldown between restart attempts.
 
 ## Don’t over-engineer
