@@ -51,6 +51,10 @@
                             <input type="checkbox" id="show-link-types">
                             <span>Show link types</span>
                         </label>
+                        <label class="settings-option" title="Show cognates and other related words alongside direct ancestors">
+                            <input type="checkbox" id="include-related">
+                            <span>Include cognates</span>
+                        </label>
                     </div>
                 </div>
                 <!-- Mobile: single menu button -->
@@ -72,6 +76,10 @@
                         <label class="mobile-menu-item settings-option" title="Color edges by link type">
                             <input type="checkbox" id="mobile-show-link-types">
                             <span>Show link types</span>
+                        </label>
+                        <label class="mobile-menu-item settings-option" title="Show cognates and related words">
+                            <input type="checkbox" id="mobile-include-related">
+                            <span>Include cognates</span>
                         </label>
                         <div class="mobile-menu-divider"></div>
                         <a href="https://github.com/lucharo/etymology-for-all/issues/new/choose" target="_blank" rel="noopener" class="mobile-menu-item mobile-external-link">Report an issue <span class="external-icon">↗</span></a>
@@ -361,8 +369,8 @@
                     </p>
                     <h3>Graph Traversal</h3>
                     <p>
-                        The graph follows etymology connections recursively up to 5 levels deep,
-                        including both ancestors and cognates.
+                        The graph follows etymology connections recursively up to 5 levels deep.
+                        It shows direct ancestors by default; cognates can be included from settings.
                     </p>
                     <p class="example">
                         Example: "friend" connects to 12 words directly. Following each of those
@@ -414,7 +422,7 @@
                     </ol>
                     <h3>Reading the Graph</h3>
                     <ul>
-                        <li><strong>Arrows</strong> point from modern words to their ancestors</li>
+                        <li><strong>Arrows</strong> point from modern words to their ancestors by default</li>
                         <li><strong>Click any word</strong> to see its language family and definition</li>
                         <li><strong>Language families</strong> show how languages are historically related</li>
                     </ul>
@@ -433,9 +441,10 @@
                     <h3>Limitations</h3>
                     <p>
                         Not all words have definitions available. Some etymology connections may be incomplete
-                        or reflect Wiktionary's editorial choices. Compound word breakdowns (e.g., "magn-animus")
-                        are not yet supported. Definition matching between EtymDB senses and dictionary entries
-                        is approximate—there is no shared identifier between the two data sources.
+                        or reflect Wiktionary's editorial choices. Cognates are related words, not direct
+                        ancestors, so they are hidden by default and can be enabled separately. Definition
+                        matching between EtymDB senses and dictionary entries is approximate—there is no shared
+                        identifier between the two data sources.
                     </p>
                 </div>
             </div>

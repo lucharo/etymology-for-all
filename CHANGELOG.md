@@ -4,6 +4,13 @@ Human-readable history of the Etymology Graph Explorer.
 
 ---
 
+## Unreleased
+
+### Fixed
+- Default graphs now hide cognates and other related-word links so arrows represent direct ancestry. Cognates remain available through an explicit setting and `include_related=true` API parameter.
+
+---
+
 ## v0.11.0 - Bug Fixes and Improvements (2026-01-28)
 
 Small bug fixes and improvements to backend, UI, and documentation.
@@ -399,4 +406,3 @@ Merged the improved backend implementation:
 [EtymDB 2.1](https://github.com/clefourrier/EtymDB) - open etymological database derived from Wiktionary.
 
 > Fourrier & Sagot (2020), "Methodological Aspects of Developing and Managing an Etymological Lexical Resource"
-

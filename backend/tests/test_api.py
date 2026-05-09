@@ -197,22 +197,34 @@ def test_random_endpoint_returns_word():
 
 
 def test_graph_picks_entry_with_most_links():
-    """Test that when duplicate entries exist, we pick the one with most etymology links."""
+    """Test that when duplicate entries exist, we pick the richest entry."""
     response = client.get("/graph/twin")
     assert response.status_code == 200
     payload = response.json()
 
     # twin entry 101 has 3 links, entry 100 has 1 link
-    # We should get the richer graph (4 nodes: twin, twinjaz, dwóh₁, geminus)
-    assert len(payload["nodes"]) == 4
-    assert len(payload["edges"]) >= 3
+    # Cognates are hidden by default, so the ancestry graph has 3 nodes.
+    assert len(payload["nodes"]) == 3
+    assert len(payload["edges"]) >= 2
 
     # Verify we have all expected nodes
     lexemes = {n["lexeme"] for n in payload["nodes"]}
     assert "twin" in lexemes
     assert "twinjaz" in lexemes
     assert "dwóh₁" in lexemes
+    assert "geminus" not in lexemes
+    assert all(edge["type"] != "cog" for edge in payload["edges"])
+
+
+def test_graph_can_include_cognates_when_requested():
+    """Test that related/cognate links are opt-in, not part of the default ancestry graph."""
+    response = client.get("/graph/twin?include_related=true")
+    assert response.status_code == 200
+    payload = response.json()
+
+    lexemes = {n["lexeme"] for n in payload["nodes"]}
     assert "geminus" in lexemes
+    assert any(edge["type"] == "cog" for edge in payload["edges"])
 
 
 def test_search_shows_all_valid_senses():

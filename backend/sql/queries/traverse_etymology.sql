@@ -5,12 +5,14 @@ resolved_links AS (
     SELECT source, target AS parent_ix, FALSE AS is_compound, type
     FROM links
     WHERE target > 0
+      AND (? OR type IS NULL OR type != 'cog')
     UNION ALL
     -- Compound links (negative target = sequence, resolve to parents)
     SELECT l.source, s.parent_ix, TRUE AS is_compound, l.type
     FROM links l
     JOIN sequences s ON s.seq_ix = l.target
     WHERE l.target < 0
+      AND (? OR l.type IS NULL OR l.type != 'cog')
 ),
 traversal(child_ix, parent_ix, is_compound, type, lvl) AS (
     SELECT source, parent_ix, is_compound, type, 1
