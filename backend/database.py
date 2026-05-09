@@ -179,7 +179,7 @@ def fetch_etymology(word: str, depth: int = 5, include_related: bool = False) ->
         # Find starting word (prefer English, then most etymology links)
         start = conn.execute(
             load_sql("queries/find_start_word.sql"),
-            [word],
+            [word, include_related],
         ).fetchone()
         if not start:
             return None

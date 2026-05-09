@@ -53,6 +53,12 @@ def _prepare_test_database() -> None:
                 (302, "en", "-er", None),  # Morpheme with sense=NULL (garbage links)
                 (303, "en", "garbage1", "unrelated word 1"),  # Garbage target
                 (304, "en", "garbage2", "unrelated word 2"),  # Garbage target
+                # Duplicate selection test: one entry has more cognates, the other has ancestry
+                (400, "en", "sensepick", "cognate-rich entry"),
+                (401, "en", "sensepick", "ancestor-rich entry"),
+                (402, "de", "Sinnwahl", "sensepick cognate 1"),
+                (403, "nl", "zinselectie", "sensepick cognate 2"),
+                (404, "proto-germanic", "sinnakuzaną", "sensepick ancestor"),
             ],
         )
         conn.executemany(
@@ -77,6 +83,11 @@ def _prepare_test_database() -> None:
                 # Garbage links FROM -er (sense=NULL) - should NOT be traversed
                 ("der", 302, 303),  # -er -> garbage1
                 ("der", 302, 304),  # -er -> garbage2
+                # Duplicate selection regression:
+                # entry 400 has more total links but only cognates; entry 401 has ancestry
+                ("cog", 400, 402),
+                ("cog", 400, 403),
+                ("inh", 401, 404),
             ],
         )
 
@@ -225,6 +236,19 @@ def test_graph_can_include_cognates_when_requested():
     lexemes = {n["lexeme"] for n in payload["nodes"]}
     assert "geminus" in lexemes
     assert any(edge["type"] == "cog" for edge in payload["edges"])
+
+
+def test_graph_start_word_selection_matches_related_filter():
+    """Test duplicate ranking uses the same relation filter as traversal."""
+    response = client.get("/graph/sensepick")
+    assert response.status_code == 200
+    payload = response.json()
+
+    lexemes = {n["lexeme"] for n in payload["nodes"]}
+    assert "sinnakuzaną" in lexemes
+    assert "Sinnwahl" not in lexemes
+    assert "zinselectie" not in lexemes
+    assert all(edge["type"] != "cog" for edge in payload["edges"])
 
 
 def test_search_shows_all_valid_senses():
