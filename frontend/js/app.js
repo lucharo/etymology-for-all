@@ -42,6 +42,7 @@ const elements = {
     searchBtn: document.getElementById('search-btn'),
     randomBtn: document.getElementById('random-btn'),
     includeCompound: document.getElementById('include-compound'),
+    includeRelated: document.getElementById('include-related'),
     graphContainer: document.getElementById('graph-container'),
     cyContainer: document.getElementById('cy'),
     loadingEl: document.getElementById('loading'),
@@ -87,6 +88,11 @@ let searchTimeout = null;
 let serverReady = false;
 let graphAvailable = false;
 let currentView = 'graph'; // 'graph' or 'tree'
+let currentIncludeRelated = false;
+
+function shouldIncludeRelated() {
+    return elements.includeRelated?.checked ?? false;
+}
 
 // Server health check with retry (HF Spaces sleep after inactivity)
 async function checkServerHealth(maxWaitMs = 120000) {
@@ -226,9 +232,16 @@ function renderGraph(data, searchedWord, filterByDepth = true) {
         return;
     }
 
-    if (!filterByDepth || !fullGraphData || currentSearchedWord !== searchedWord) {
+    const includeRelated = shouldIncludeRelated();
+    if (
+        !filterByDepth ||
+        !fullGraphData ||
+        currentSearchedWord !== searchedWord ||
+        currentIncludeRelated !== includeRelated
+    ) {
         fullGraphData = data;
         currentSearchedWord = searchedWord;
+        currentIncludeRelated = includeRelated;
         graphMaxDepth = calculateMaxGraphDepth(data.nodes, data.edges, searchedWord);
         currentDepth = graphMaxDepth;
     }
@@ -288,7 +301,7 @@ async function handleSearch() {
     showLoading(elements);
 
     try {
-        const data = await fetchEtymology(word);
+        const data = await fetchEtymology(word, shouldIncludeRelated());
         renderGraph(data, word);
     } catch (err) {
         showError(err.message, elements, minimizeGraph, { searchedWord: word });
@@ -312,7 +325,7 @@ async function handleRandom() {
             return;
         }
         elements.wordInput.value = word;
-        const data = await fetchEtymology(word);
+        const data = await fetchEtymology(word, shouldIncludeRelated());
         renderGraph(data, word);
     } catch (err) {
         showError(err.message, elements, minimizeGraph, { searchedWord: elements.wordInput.value.trim() });
@@ -397,6 +410,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (mobileCompound) mobileCompound.checked = elements.includeCompound.checked;
             if (fullGraphData && currentSearchedWord) {
                 renderGraph(fullGraphData, currentSearchedWord, true);
+            }
+        });
+    }
+
+    // Related-word filter checkbox - re-fetches because cognates are excluded server-side by default
+    if (elements.includeRelated) {
+        elements.includeRelated.addEventListener('change', async () => {
+            const mobileRelated = document.getElementById('mobile-include-related');
+            if (mobileRelated) mobileRelated.checked = elements.includeRelated.checked;
+            if (currentSearchedWord) {
+                showLoading(elements);
+                try {
+                    const data = await fetchEtymology(currentSearchedWord, shouldIncludeRelated());
+                    renderGraph(data, currentSearchedWord);
+                } catch (err) {
+                    showError(err.message, elements, minimizeGraph, { searchedWord: currentSearchedWord });
+                }
             }
         });
     }
@@ -561,6 +591,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobileMenu = document.getElementById('mobile-menu');
     const mobileAboutBtn = document.getElementById('mobile-about-btn');
     const mobileIncludeCompound = document.getElementById('mobile-include-compound');
+    const mobileIncludeRelated = document.getElementById('mobile-include-related');
 
     if (mobileMenuBtn && mobileMenu) {
         mobileMenuBtn.addEventListener('click', (e) => {
@@ -586,6 +617,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         mobileIncludeCompound.addEventListener('change', () => {
             elements.includeCompound.checked = mobileIncludeCompound.checked;
             elements.includeCompound.dispatchEvent(new Event('change'));
+        });
+    }
+
+    // Sync mobile related checkbox with desktop
+    if (mobileIncludeRelated && elements.includeRelated) {
+        mobileIncludeRelated.addEventListener('change', () => {
+            elements.includeRelated.checked = mobileIncludeRelated.checked;
+            elements.includeRelated.dispatchEvent(new Event('change'));
         });
     }
 

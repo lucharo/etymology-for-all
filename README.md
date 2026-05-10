@@ -50,7 +50,7 @@ docker run -p 7860:7860 etymology
 | Endpoint | Description |
 |----------|-------------|
 | `GET /` | Web interface |
-| `GET /graph/{word}` | Etymology graph for a word (JSON) |
+| `GET /graph/{word}` | Etymology graph for a word (JSON); add `include_related=true` to include cognates |
 | `GET /search?q=<query>&limit=<n>` | Search/autocomplete for words |
 | `GET /random` | Random English word |
 | `GET /version` | App version and database stats |

@@ -6,8 +6,12 @@ import { handleApiResponse, truncate, escapeHtml } from './utils.js';
 
 const FETCH_DEPTH = 10;
 
-export async function fetchEtymology(word) {
-    const response = await fetch(`/graph/${encodeURIComponent(word)}?depth=${FETCH_DEPTH}`);
+export async function fetchEtymology(word, includeRelated = false) {
+    const params = new URLSearchParams({
+        depth: FETCH_DEPTH,
+        include_related: includeRelated,
+    });
+    const response = await fetch(`/graph/${encodeURIComponent(word)}?${params.toString()}`);
     await handleApiResponse(response, 'etymology lookup');
     const data = await response.json();
     return data;

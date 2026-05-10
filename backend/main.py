@@ -65,11 +65,11 @@ def version():
 
 @app.get("/graph/{word}")
 @limiter.limit("20/minute")
-def get_graph(request: Request, word: str, depth: int = 5):
+def get_graph(request: Request, word: str, depth: int = 5, include_related: bool = False):
     """Fetch etymology graph for a word."""
     # Clamp depth to reasonable bounds
     depth = max(1, min(depth, 10))
-    graph = fetch_etymology(word, depth=depth)
+    graph = fetch_etymology(word, depth=depth, include_related=include_related)
     if graph is None:
         raise HTTPException(status_code=404, detail="Word not found in the database")
     return graph

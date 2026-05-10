@@ -166,7 +166,7 @@ def get_db_stats() -> dict:
         return {"words": words, "definitions": definitions}
 
 
-def fetch_etymology(word: str, depth: int = 5) -> dict | None:
+def fetch_etymology(word: str, depth: int = 5, include_related: bool = False) -> dict | None:
     """Return an etymology graph for *word* or ``None`` if absent."""
     if not word:
         return None
@@ -179,7 +179,7 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
         # Find starting word (prefer English, then most etymology links)
         start = conn.execute(
             load_sql("queries/find_start_word.sql"),
-            [word],
+            [word, include_related],
         ).fetchone()
         if not start:
             return None
@@ -197,7 +197,7 @@ def fetch_etymology(word: str, depth: int = 5) -> dict | None:
             # Track is_compound to style compound edges differently in the UI
             records = conn.execute(
                 load_sql("queries/traverse_etymology.sql"),
-                [start_ix, depth],
+                [include_related, include_related, start_ix, depth],
             ).fetchall()
 
             for row in records:
