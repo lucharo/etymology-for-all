@@ -59,6 +59,13 @@ def _prepare_test_database() -> None:
                 (402, "de", "Sinnwahl", "sensepick cognate 1"),
                 (403, "nl", "zinselectie", "sensepick cognate 2"),
                 (404, "proto-germanic", "sinnakuzaną", "sensepick ancestor"),
+                # Tie-break test: duplicates tie on non-cog links, differ in cognates
+                (500, "en", "tiepick", "plain ancestry entry"),
+                (501, "en", "tiepick", "cognate-heavy entry"),
+                (502, "proto-germanic", "tiepickaz", "tiepick ancestor A"),
+                (503, "proto-germanic", "tiepickuz", "tiepick ancestor B"),
+                (504, "de", "Tiepick", "tiepick cognate 1"),
+                (505, "nl", "tiepiek", "tiepick cognate 2"),
             ],
         )
         conn.executemany(
@@ -88,6 +95,13 @@ def _prepare_test_database() -> None:
                 ("cog", 400, 402),
                 ("cog", 400, 403),
                 ("inh", 401, 404),
+                # Tie-break regression:
+                # entries 500 and 501 tie on non-cog links (1 inh each);
+                # 501 has extra cognates that must not decide default selection
+                ("inh", 500, 502),
+                ("inh", 501, 503),
+                ("cog", 501, 504),
+                ("cog", 501, 505),
             ],
         )
 
@@ -249,6 +263,21 @@ def test_graph_start_word_selection_matches_related_filter():
     assert "Sinnwahl" not in lexemes
     assert "zinselectie" not in lexemes
     assert all(edge["type"] != "cog" for edge in payload["edges"])
+
+
+def test_graph_start_word_tie_break_ignores_cognates():
+    """Duplicates tied on non-cog links must not be ordered by hidden cognates."""
+    response = client.get("/graph/tiepick")
+    assert response.status_code == 200
+    payload = response.json()
+
+    lexemes = {n["lexeme"] for n in payload["nodes"]}
+    # Tie falls through to word_ix, picking entry 500 (ancestor A),
+    # not the cognate-heavy entry 501
+    assert "tiepickaz" in lexemes
+    assert "tiepickuz" not in lexemes
+    assert "Tiepick" not in lexemes
+    assert "tiepiek" not in lexemes
 
 
 def test_search_shows_all_valid_senses():
