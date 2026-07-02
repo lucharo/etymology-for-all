@@ -216,9 +216,16 @@ def test_graph_endpoint_returns_no_etymology_for_loneword():
 def test_random_endpoint_returns_word():
     response = client.get("/random")
     assert response.status_code == 200
-    # "mother", "twin", "friend", and "uplander" are in v_english_curated (has etymology, is clean)
-    # "loneword" has no etymology links so it's excluded
-    assert response.json()["word"] in ["mother", "twin", "friend", "uplander"]
+    # All English fixture words with a sense and outgoing links are in
+    # v_english_curated; "loneword" has no etymology links so it's excluded
+    assert response.json()["word"] in [
+        "mother",
+        "twin",
+        "friend",
+        "uplander",
+        "sensepick",
+        "tiepick",
+    ]
 
 
 def test_graph_picks_entry_with_most_links():
